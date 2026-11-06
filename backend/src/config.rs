@@ -63,6 +63,8 @@ pub struct Config {
     pub legacy_proxy_secret: Option<String>,
     pub rate_limit_max: u32,
     pub rate_limit_window_ms: i64,
+    /// Tools fixas do env (`TANIA_TOOLS=id=url,...`), cada uma com seu segredo.
+    pub tools: Vec<crate::tools::ToolEnv>,
 }
 
 impl Default for Config {
@@ -75,6 +77,7 @@ impl Default for Config {
             legacy_proxy_secret: None,
             rate_limit_max: 300,
             rate_limit_window_ms: 60_000,
+            tools: Vec::new(),
         }
     }
 }
@@ -112,6 +115,11 @@ impl Config {
                 .ok()
                 .and_then(|value| value.parse().ok())
                 .unwrap_or(60_000),
+            // TANIA_TOOLS vazio == nenhuma tool do env.
+            tools: crate::tools::parse_tools_env(
+                &env::var("TANIA_TOOLS").unwrap_or_default(),
+                |chave| env::var(chave).ok(),
+            ),
         })
     }
 }

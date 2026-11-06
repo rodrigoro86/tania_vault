@@ -82,6 +82,8 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::reminders::routes())
         // investimentos: rotas simples no Postgres; resumo, POSTs e rotinas ficam no Node
         .merge(crate::investimentos::routes())
+        // tools registradas (env + banco) e leitura do manifesto de cada uma
+        .merge(crate::tools::routes::routes())
         // Tudo o mais é repassado ao Node, em qualquer método/caminho.
         .fallback(proxy)
         // ordem: gate (por fora) -> rate limit -> csrf -> rotas/proxy.

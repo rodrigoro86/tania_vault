@@ -23,6 +23,10 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "102_agentes_config.sql",
         include_str!("../../migrations/102_agentes_config.sql"),
     ),
+    (
+        "103_tools.sql",
+        include_str!("../../migrations/103_tools.sql"),
+    ),
 ];
 
 /// Cria o pool (max 5 conexões) a partir de uma URL `postgres://...`; URL vazia =

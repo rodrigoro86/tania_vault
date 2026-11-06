@@ -7,5 +7,6 @@ pub mod investimentos;
 pub mod reminders;
 pub mod settings;
 pub mod storage;
+pub mod tools;
 pub mod users;
 pub mod vault;
