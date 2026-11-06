@@ -4,6 +4,7 @@
 //! Rotas, proxy e config por tool vêm depois (Task 2/3); aqui só tipos, parsing
 //! e consulta — nada de HTTP exposto.
 
+pub mod config;
 pub mod repo;
 pub mod routes;
 
@@ -28,6 +29,14 @@ pub fn valid_url(url: &str) -> bool {
     url.len() <= 300
         && (url.starts_with("http://") || url.starts_with("https://"))
         && !url.chars().any(char::is_whitespace)
+}
+
+/// Quem atravessou o portão do `/api/core/*`: a tool identificada pelo
+/// `Authorization: Tool <id>:<segredo>`. Só o id segue adiante; o segredo fica
+/// na verificação do portão.
+#[derive(Debug, Clone)]
+pub struct ToolAuth {
+    pub id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

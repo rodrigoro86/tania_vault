@@ -14,7 +14,7 @@ use axum::extract::rejection::JsonRejection;
 use axum::extract::{Extension, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{get, put};
+use axum::routing::{any, get, put};
 use axum::{Json, Router};
 use futures_util::future::join_all;
 use serde::Deserialize;
@@ -23,7 +23,8 @@ use serde_json::json;
 use crate::error::ApiError;
 use crate::http::proxy::proxy;
 use crate::http::AppState;
-use crate::tools::{manifesto, registros, valid_id, valid_url, Registro};
+use crate::tools::config::{gravar_config, valores_da_tool, ver_config};
+use crate::tools::{manifesto, registro, registros, valid_id, valid_url, Registro, ToolAuth};
 use crate::users::routes::{admin, db, db_error, json_body, me};
 use crate::users::Usuario;
 
@@ -278,6 +279,26 @@ async fn apagar_tool(
     Ok(Json(json!({ "ok": true })))
 }
 
+// --- GET /api/core/config -----------------------------------------------------
+
+/// Os valores de config prontos para a tool, já decifrados. O portão já validou
+/// o `Tool <id>:<segredo>`; se a tool desapareceu entre os dois, 401.
+async fn core_config(
+    State(state): State<AppState>,
+    Extension(auth): Extension<ToolAuth>,
+) -> Result<impl IntoResponse, ApiError> {
+    let Some(r) = registro(&state, &auth.id).await else {
+        return Err(ApiError::Http(
+            StatusCode::UNAUTHORIZED,
+            "tool não autorizada".to_string(),
+        ));
+    };
+
+    let valores = valores_da_tool(&state, &r).await?;
+
+    Ok(Json(json!({ "ok": true, "valores": valores })))
+}
+
 /// Rotas das tools. Métodos não registrados no caminho caem no proxy.
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -289,4 +310,11 @@ pub fn routes() -> Router<AppState> {
             "/api/tools/{id}",
             put(editar_tool).delete(apagar_tool).fallback(proxy),
         )
+        .route(
+            "/api/tools/{id}/config",
+            get(ver_config).put(gravar_config).fallback(proxy),
+        )
+        // o núcleo falado pelo portão do segredo: `/api/core/*`
+        .route("/api/core/config", get(core_config))
+        .route("/api/core/{rest}", any(proxy))
 }

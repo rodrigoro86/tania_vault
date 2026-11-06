@@ -7,9 +7,11 @@ use axum::http::{HeaderMap, HeaderValue, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use subtle::ConstantTimeEq;
 
 use crate::db::PgPool;
 use crate::http::AppState;
+use crate::tools::ToolAuth;
 use crate::users::{password, repo, Usuario};
 
 /// Portão de login: roda antes do proxy (e antes do front), porque o bundle do
@@ -174,6 +176,53 @@ pub fn session_token(headers: &HeaderMap) -> Option<String> {
     (!cookie.is_empty()).then_some(cookie)
 }
 
+/// `Authorization: Tool <id>:<segredo>` — o segredo da tool para o `/api/core/*`.
+/// Qualquer outra coisa (outro esquema, sem header, sem `:`) dá `None`. O split
+/// é no primeiro `:`, então um segredo com `:` dentro continua inteiro.
+fn tool_header(headers: &HeaderMap) -> Option<(String, String)> {
+    let value = String::from_utf8_lossy(headers.get("authorization")?.as_bytes());
+    let rest = value.strip_prefix("Tool ")?;
+    let (id, segredo) = rest.split_once(':')?;
+    if id.is_empty() || segredo.is_empty() {
+        return None;
+    }
+    Some((id.to_string(), segredo.to_string()))
+}
+
+/// Portão das tools: `/api/core/*` só entra com `Tool <id>:<segredo>` que bate
+/// com o segredo registrado (comparação em tempo constante). Falha = 401.
+async fn gate_tool(state: &AppState, mut request: Request, next: Next) -> Response {
+    let denied = || {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "ok": false, "error": "tool não autorizada" })),
+        )
+            .into_response()
+    };
+
+    let Some((id, segredo)) = tool_header(request.headers()) else {
+        return denied();
+    };
+
+    let Some(registrada) = crate::tools::registro(state, &id).await else {
+        tracing::debug!("gate: tool '{id}' não registrada ou inativa");
+        return denied();
+    };
+
+    // tamanhos diferentes já dão falso; `ct_eq` não vaza por tempo
+    let ok: bool = segredo
+        .as_bytes()
+        .ct_eq(registrada.segredo.as_bytes())
+        .into();
+    if !ok {
+        tracing::warn!("gate: segredo errado para a tool '{id}'");
+        return denied();
+    }
+
+    request.extensions_mut().insert(ToolAuth { id });
+    next.run(request).await
+}
+
 pub fn session_cookie(value: &str, max_age: i64, secure: bool) -> String {
     format!(
         "{COOKIE}={value}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}{}",
@@ -305,6 +354,12 @@ pub async fn gate(
     // 3) healthcheck, público e sem dados sensíveis
     if is_get && pathname == "/api/health" {
         return next.run(request).await;
+    }
+
+    // 3.5) `/api/core/*`: quem chama é a tool, identificada pelo próprio
+    //      segredo (`Tool <id>:<segredo>`), não pela sessão do usuário.
+    if pathname.starts_with("/api/core/") {
+        return gate_tool(&state, request, next).await;
     }
 
     // 4) sem Postgres não existe sessão possível: só loopback entra.
