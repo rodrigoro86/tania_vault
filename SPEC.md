@@ -412,6 +412,10 @@ A troca do ativo continua em `POST /api/agent/config` (Node), que grava no banco
 do agente a cada pedido (ausente = nada muda); `99-Meta/Agentes/Equipe/*.md` são as instruções da equipe de desenvolvimento,
 sincronizadas com `agents/*.md` por `scripts/agentes.mjs`. O painel 🤖 Agents lista essas notas em "Instruções".
 
+**Agentes da Tania** (spec `docs/superpowers/specs/2026-11-06-agentes-da-tania-design.md`): cada nota `99-Meta/Agentes/Tania/<nome>.md`
+com `quando:` no frontmatter é um agente especializado (ex.: `agenda`, `ideias`). O prompt lista nome + quando; a ferramenta
+`usar_agente({nome})` devolve as instruções. Vale para terminal e WhatsApp (mesmo `runAgent`). Modelos em `agents/tania/`.
+
 ### 7.10 Tools (funcionalidades plugáveis)
 
 Uma **tool** é um serviço HTTP com contrato fixo: `GET /manifest.json` (id, nome, ícone, páginas, vínculos, config, prompt),

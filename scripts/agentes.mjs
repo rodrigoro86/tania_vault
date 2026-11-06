@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/agentes.mjs — sincroniza agents/*.md com 99-Meta/Agentes/Equipe/ no vault de produção.
+// scripts/agentes.mjs — sincroniza agents/*.md ↔ 99-Meta/Agentes/Equipe/ e agents/tania/*.md ↔ 99-Meta/Agentes/Tania/.
 // Node 24, sem dependências. Config em .env.agentes na raiz (TANIA_URL, TANIA_SESSAO).
 
 import path from 'node:path';
@@ -8,9 +8,12 @@ import { pathToFileURL } from 'node:url';
 import readline from 'node:readline';
 
 const ARQUIVO_CONFIG = '.env.agentes';
-const PREFIXO = '99-Meta/Agentes/Equipe/';
 const NOME_VALIDO = /^[A-Za-z0-9._-]+\.md$/;
-const CAMINHO_NOTA = /^99-Meta\/Agentes\/Equipe\/([A-Za-z0-9._-]+\.md)$/;
+// pasta local (relativa a agents/) ↔ pasta no vault; `rotulo` prefixa o nome no relatório
+const PARES = [
+  { local: '', remoto: '99-Meta/Agentes/Equipe/', rotulo: '' },
+  { local: 'tania', remoto: '99-Meta/Agentes/Tania/', rotulo: 'tania/' },
+];
 const SESSAO_EXPIRADA = 'sessão expirada: rode node scripts/agentes.mjs login';
 
 export function raizRepo() {
@@ -116,23 +119,25 @@ export async function push({ url, sessao, agentsDir }) {
   const criados = [];
   const pulados = [];
 
-  let nomes;
-  try {
-    nomes = await fs.promises.readdir(agentsDir);
-  } catch (err) {
-    throw new Error(`não li ${agentsDir}: ${err.message}`);
-  }
-
-  for (const nome of nomes.sort()) {
-    if (!NOME_VALIDO.test(nome)) continue;
-    const content = await fs.promises.readFile(path.join(agentsDir, nome), 'utf8');
-    const res = await request(url, '/api/notes', sessao, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ path: `${PREFIXO}${nome}`, content }),
-    });
-    if (res.status === 409) pulados.push(nome);
-    else criados.push(nome);
+  for (const par of PARES) {
+    const dir = path.join(agentsDir, par.local);
+    let nomes;
+    try {
+      nomes = await fs.promises.readdir(dir);
+    } catch (err) {
+      if (par.local) continue; // agents/tania é opcional
+      throw new Error(`não li ${dir}: ${err.message}`);
+    }
+    for (const nome of nomes.sort()) {
+      if (!NOME_VALIDO.test(nome)) continue;
+      const content = await fs.promises.readFile(path.join(dir, nome), 'utf8');
+      const res = await request(url, '/api/notes', sessao, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path: `${par.remoto}${nome}`, content }),
+      });
+      (res.status === 409 ? pulados : criados).push(`${par.rotulo}${nome}`);
+    }
   }
 
   return { criados, pulados };
@@ -145,14 +150,18 @@ export async function pull({ url, sessao, agentsDir }) {
 
   const gravados = [];
   for (const note of notes) {
-    const m = CAMINHO_NOTA.exec(String(note?.path || ''));
-    if (!m || typeof note.content !== 'string') continue;
-    const nome = m[1];
-    const destino = path.join(agentsDir, nome);
+    const caminho = String(note?.path || '');
+    const par = PARES.find((p) => caminho.startsWith(p.remoto));
+    if (!par || typeof note.content !== 'string') continue;
+    const nome = caminho.slice(par.remoto.length);
+    if (!NOME_VALIDO.test(nome)) continue; // subpasta ou nome estranho: fora
+    const dir = path.join(agentsDir, par.local);
+    const destino = path.join(dir, nome);
     const atual = await fs.promises.readFile(destino, 'utf8').catch(() => null);
     if (atual === note.content) continue;
+    await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(destino, note.content);
-    gravados.push(nome);
+    gravados.push(`${par.rotulo}${nome}`);
   }
   return { gravados };
 }

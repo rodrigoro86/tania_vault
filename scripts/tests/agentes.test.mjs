@@ -174,3 +174,40 @@ test('pull grava só Equipe/<nome>.md válido, não apaga nada e só escreve qua
   assert.deepEqual(repetido.gravados, []);
   srv.close();
 });
+
+test('agents/tania/ ↔ 99-Meta/Agentes/Tania/: push cria, pull traz (sem subpasta)', async () => {
+  const criadas = [];
+  const notes = [
+    { path: '99-Meta/Agentes/Tania/agenda.md', content: 'agenda do vault' },
+    { path: '99-Meta/Agentes/Tania/sub/x.md', content: 'subpasta' },
+  ];
+  const srv = await servidor((req, res) => {
+    if (req.method === 'POST' && req.url === '/api/notes') {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        criadas.push(JSON.parse(body).path);
+        res.writeHead(201, { 'content-type': 'application/json' }).end('{"ok":true}');
+      });
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ notes }));
+  });
+
+  const dir = tempDir();
+  fs.writeFileSync(path.join(dir, 'agent-spec.md'), 'spec');
+  fs.mkdirSync(path.join(dir, 'tania'));
+  fs.writeFileSync(path.join(dir, 'tania', 'ideias.md'), 'ideias');
+
+  const p = await push({ url: srv.url, sessao: 'ses', agentsDir: dir });
+  assert.deepEqual(p.criados, ['agent-spec.md', 'tania/ideias.md']);
+  assert.deepEqual(criadas, ['99-Meta/Agentes/Equipe/agent-spec.md', '99-Meta/Agentes/Tania/ideias.md']);
+
+  const r = await pull({ url: srv.url, sessao: 'ses', agentsDir: dir });
+  assert.deepEqual(r.gravados, ['tania/agenda.md']);
+  assert.equal(fs.readFileSync(path.join(dir, 'tania', 'agenda.md'), 'utf8'), 'agenda do vault');
+  assert.ok(!fs.existsSync(path.join(dir, 'tania', 'sub')));
+  assert.equal(fs.readFileSync(path.join(dir, 'tania', 'ideias.md'), 'utf8'), 'ideias', 'pull não apaga');
+  srv.close();
+});

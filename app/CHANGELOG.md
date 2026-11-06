@@ -9,6 +9,7 @@ Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.m
 ## [Não lançado]
 
 ### Adicionado
+- Instruções do painel 🤖 Agents agrupadas em **Tania** (geral + agentes especializados) e **Equipe**.
 - 🤖 Painel Agents ganha a seção **Instruções**: abre as notas de `99-Meta/Agentes/` (Tania e equipe) no editor. O agente lê `99-Meta/Agentes/Tania.md` a cada pedido.
 
 ### Alterado

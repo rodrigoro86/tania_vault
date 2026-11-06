@@ -6,6 +6,7 @@ versões em [SemVer](https://semver.org/lang/pt-BR/). O detalhe do front fica em
 ## [Não lançado]
 
 ### Adicionado
+- 🤖 **Agentes da Tania**: notas `99-Meta/Agentes/Tania/<nome>.md` (com `quando:`) viram agentes especializados que a Tania escolhe sozinha pela ferramenta `usar_agente`, no terminal e no WhatsApp. Modelos `agenda` e `ideias` em `agents/tania/`. No WhatsApp, `feito:` e `ideia:` passam pelo agente; sem LLM, gravam direto como antes.
 - 🤖 Instruções dos agentes editáveis pelo front (🤖 Agents → Instruções): `99-Meta/Agentes/Tania.md` entra no prompt do agente da Tania; a equipe de desenvolvimento fica em `99-Meta/Agentes/Equipe/` e o `scripts/agentes.mjs` (`login`, `push`, `pull`) sincroniza com `agents/*.md`. Fonte de verdade: o vault de produção.
 - 🧩 **Tools**: funcionalidades viram serviços plugáveis (manifesto + funções MCP do agente + páginas em iframe). Registro pelo env (`TANIA_TOOLS`) ou pela tela ⚙ → Tools, config por tool cifrada, proxy `/tools/{id}/ui|api/*` e `/api/core/config` no backend Rust. Spec `docs/superpowers/specs/2026-11-06-tools-design.md`.
 

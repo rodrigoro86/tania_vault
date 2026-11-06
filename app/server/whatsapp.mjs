@@ -108,6 +108,19 @@ export function lembrar(c, ...mensagens) {
   c.history.splice(0, Math.max(0, c.history.length - CONVERSA_MAX));
 }
 
+/**
+ * atalhos (ideia:, feito:) passam pelo agente, que escolhe o agente especializado (agenda, ideias...);
+ * se o agente falhar (sem LLM, erro, timeout), grava direto como antes, para não perder a mensagem
+ */
+export async function atalhoPeloAgente(pedir, direto) {
+  try {
+    return await pedir();
+  } catch (err) {
+    console.warn('whatsapp: agente indisponível, atalho gravado direto:', err?.message);
+    return direto();
+  }
+}
+
 /** roda o agente com o histórico e os comprovantes ainda sem recebimento */
 async function askAgent(number, text) {
   const c = conversa(number);
@@ -230,15 +243,15 @@ async function processMessage(body) {
       await sendText(number, await askAgent(number, text));
       return;
     }
-    if (isIdea(text)) {
-      const resposta = `✅ Ideia salva em ${await writeIdea(text)}`;
-      lembrar(conversa(number), { role: 'user', content: text }, { role: 'assistant', content: resposta });
-      await sendText(number, resposta);
-      return;
-    }
-    if (isDone(text)) {
-      const resposta = `✅ Registrado em ${await writeDone(text)}`;
-      lembrar(conversa(number), { role: 'user', content: text }, { role: 'assistant', content: resposta });
+    if (isIdea(text) || isDone(text)) {
+      const resposta = await atalhoPeloAgente(
+        () => askAgent(number, text),
+        async () => {
+          const direto = isIdea(text) ? `✅ Ideia salva em ${await writeIdea(text)}` : `✅ Registrado em ${await writeDone(text)}`;
+          lembrar(conversa(number), { role: 'user', content: text }, { role: 'assistant', content: direto });
+          return direto;
+        },
+      );
       await sendText(number, resposta);
       return;
     }

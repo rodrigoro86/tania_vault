@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { comprovantePath, extractMedia, hojeSP, lembrar, senderNumber } from '../whatsapp.mjs';
+import { atalhoPeloAgente, comprovantePath, extractMedia, hojeSP, lembrar, senderNumber } from '../whatsapp.mjs';
 
 test('senderNumber usa o número real quando o remoteJid é @lid', () => {
   const key = { remoteJid: '123456789012345@lid', remoteJidAlt: '5511999999999@s.whatsapp.net' };
@@ -40,4 +40,19 @@ test('lembrar mantém só as 12 últimas mensagens, em ordem', () => {
   for (let i = 1; i <= 20; i++) lembrar(c, { role: 'user', content: String(i) });
   assert.deepEqual(c.history.map((m) => m.content), ['9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']);
   assert.ok(c.at > 0);
+});
+
+test('atalhos (feito:/ideia:) vão ao agente; se ele falhar, gravam direto', async () => {
+  let direto = 0;
+  const gravar = async () => {
+    direto++;
+    return '✅ Registrado em 01-Diario/2026-11-06.md';
+  };
+  assert.equal(await atalhoPeloAgente(async () => 'Anotei na agenda.', gravar), 'Anotei na agenda.');
+  assert.equal(direto, 0, 'com agente, não grava direto');
+  const semLlm = async () => {
+    throw new Error('agente sem LLM');
+  };
+  assert.equal(await atalhoPeloAgente(semLlm, gravar), '✅ Registrado em 01-Diario/2026-11-06.md');
+  assert.equal(direto, 1, 'sem agente, cai no atalho direto');
 });

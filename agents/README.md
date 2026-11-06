@@ -6,6 +6,8 @@ direto como prompt de delegação). A carta-mestra está em [`../AGENTS.md`](../
 > **Fonte de verdade: o vault de produção**, em `99-Meta/Agentes/Equipe/` (edite pelo front: 🤖 Agents → Instruções).
 > Estes arquivos são a cópia baixada: rode `node scripts/agentes.mjs pull` antes de delegar. Primeira vez:
 > `node scripts/agentes.mjs login` e `node scripts/agentes.mjs push` (só cria o que não existe no vault).
+>
+> `tania/` guarda os modelos dos **agentes da Tania** (agenda, ideias...), sincronizados com `99-Meta/Agentes/Tania/`.
 
 ## Índice
 

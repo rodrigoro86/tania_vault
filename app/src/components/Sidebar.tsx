@@ -383,10 +383,27 @@ function AgentsPane({ currentPath }: { currentPath: string }) {
   }
 
   const providers = status?.providers ?? [];
-  // Tania.md primeiro; o resto (Equipe/...) em ordem alfabética
-  const instrucoes = vaultNotes
-    .filter((n) => n.path.startsWith(INSTRUCOES))
-    .sort((a, b) => (a.path.endsWith('/Tania.md') ? -1 : b.path.endsWith('/Tania.md') ? 1 : a.path.localeCompare(b.path)));
+  // grupos: Tania (Tania.md = "geral" + os agentes de Tania/) e Equipe (desenvolvimento)
+  const instrucoes = vaultNotes.filter((n) => n.path.startsWith(INSTRUCOES));
+  const grupos = [
+    {
+      titulo: 'Tania',
+      itens: [
+        ...instrucoes.filter((n) => n.path === `${INSTRUCOES}Tania.md`).map((n) => ({ n, rotulo: 'geral' })),
+        ...instrucoes
+          .filter((n) => n.path.startsWith(`${INSTRUCOES}Tania/`))
+          .sort((a, b) => a.path.localeCompare(b.path))
+          .map((n) => ({ n, rotulo: n.path.slice(`${INSTRUCOES}Tania/`.length).replace(/\.md$/, '') })),
+      ],
+    },
+    {
+      titulo: 'Equipe',
+      itens: instrucoes
+        .filter((n) => n.path.startsWith(`${INSTRUCOES}Equipe/`))
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((n) => ({ n, rotulo: n.path.slice(`${INSTRUCOES}Equipe/`.length).replace(/\.md$/, '') })),
+    },
+  ];
 
   return (
     <div className="sidebar-body">
@@ -411,22 +428,32 @@ function AgentsPane({ currentPath }: { currentPath: string }) {
       {/* sempre visível: a página /agentes decide se mostra o formulário ou "sem permissão" */}
       <Link className="sidebar-shortcut" to="/agentes">⚙ Gerenciar agents</Link>
 
-      <p className="sidebar-section-title">Instruções</p>
       {instrucoes.length === 0 && (
-        <p className="muted">
-          Nenhuma instrução no vault (rode <code>node scripts/agentes.mjs push</code>).
-        </p>
+        <>
+          <p className="sidebar-section-title">Instruções</p>
+          <p className="muted">
+            Nenhuma instrução no vault (rode <code>node scripts/agentes.mjs push</code>).
+          </p>
+        </>
       )}
-      {instrucoes.map((n) => (
-        <Link
-          key={n.path}
-          className={`sidebar-shortcut${n.path === currentPath ? ' file-active' : ''}`}
-          to={`/${encode(n.path)}`}
-          title={n.path}
-        >
-          {n.path.slice(INSTRUCOES.length).replace(/\.md$/, '')}
-        </Link>
-      ))}
+      {instrucoes.length > 0 &&
+        grupos
+          .filter((g) => g.itens.length)
+          .map((g) => (
+            <div key={g.titulo}>
+              <p className="sidebar-section-title">Instruções · {g.titulo}</p>
+              {g.itens.map(({ n, rotulo }) => (
+                <Link
+                  key={n.path}
+                  className={`sidebar-shortcut${n.path === currentPath ? ' file-active' : ''}`}
+                  to={`/${encode(n.path)}`}
+                  title={n.path}
+                >
+                  {rotulo}
+                </Link>
+              ))}
+            </div>
+          ))}
     </div>
   );
 }
