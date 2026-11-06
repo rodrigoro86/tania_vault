@@ -95,6 +95,20 @@ export const usersApi = {
   remove: (id: string) => request('DELETE', `/api/users/${id}`),
 };
 
+/* ---------- tokens de integração e canais MCP/Hook (backend Rust: /api/tokens, /api/integracoes) ---------- */
+export interface TokenApi { id: string; usuario: string; usuarioId: string; nome: string; mcp: boolean; hook: boolean; ativo: boolean; criadoEm: string; ultimoUso: string | null }
+export const tokensApi = {
+  list: async () => (await request<{ tokens: TokenApi[] }>('GET', '/api/tokens')).tokens,
+  create: (body: { nome: string; mcp: boolean; hook: boolean }) => request<{ token: string; item: TokenApi }>('POST', '/api/tokens', body),
+  update: (id: string, body: { nome?: string; mcp?: boolean; hook?: boolean; ativo?: boolean }) => request<{ item: TokenApi }>('PATCH', `/api/tokens/${id}`, body),
+  remove: (id: string) => request('DELETE', `/api/tokens/${id}`),
+};
+export interface Integracoes { mcp: boolean; hook: boolean }
+export const integracoesApi = {
+  get: () => request<Integracoes>('GET', '/api/integracoes'),
+  salvar: (body: Partial<Integracoes>) => request<Integracoes>('PUT', '/api/integracoes', body),
+};
+
 /* ---------- configuração das integrações (backend Rust: /api/config) ---------- */
 export interface ConfigItem { chave: string; grupo: string; descricao: string; segredo: boolean; origem: 'banco' | 'env' | 'vazio'; valor: string }
 export const configApi = {

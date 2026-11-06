@@ -421,6 +421,34 @@ Tabelas `tools` e `tools_config` (`backend/migrations/103_tools.sql`). O agente 
 como `{id}__{nome}` e acrescenta o `prompt` de cada manifesto. Tools internas: **ClickUp** (`app/tools/clickup/`: tarefas, painel,
 card de nota com `clickup:` no frontmatter; token em `tools_config`). Aluguéis pode voltar no futuro como tool externa.
 
+### 7.11 Tokens de integração e canais MCP/Hook (backend Rust)
+
+Agentes externos (Claude Code na máquina do usuário) usam um token para os canais MCP e Hook. Tabela `tokens_api`
+(`backend/migrations/104_tokens_api.sql`): só o sha256 do token fica no banco; sem validade (vale até desativar ou revogar).
+Spec: `docs/superpowers/specs/2026-11-06-tokens-integracao-design.md`. Gestão (Parte 1) e canais MCP/Hook (Parte 2) prontos.
+
+| Rota | Acesso | O que faz |
+|---|---|---|
+| `GET /api/tokens` | logado | admin vê todos; usuário, só os seus. Sem o token nem o hash |
+| `POST /api/tokens` `{nome, mcp, hook}` | logado | cria; devolve o token (`tania_…`) **uma vez** |
+| `PATCH /api/tokens/{id}` `{nome?, mcp?, hook?, ativo?}` | dono ou admin | altera; precisa sobrar um canal |
+| `DELETE /api/tokens/{id}` | dono ou admin | revoga |
+| `GET /api/integracoes` | admin | `{mcp, hook}` |
+| `PUT /api/integracoes` `{mcp?, hook?}` | admin | liga/desliga o canal para todos (chaves `INTEGRACAO_MCP` e `INTEGRACAO_HOOK` em `configuracoes`) |
+
+Interface: aba **Tokens** em ⚙ Configurações (`/tokens`, `app/src/components/Tokens.tsx`).
+
+Canais de integração (token `tania_…` em `Authorization: Bearer`; fora da sessão e do CSRF do `/api`):
+
+| Rota | O que faz |
+|---|---|
+| `POST /mcp` | JSON-RPC MCP 2025-06-18; ferramenta `registrar_atividade` `{agente, tarefa, minutos?}`; notificação = 202 |
+| `POST /api/agenda/registro` `{agente, tarefa, minutos?}` | mesmo registro, para o hook; 201 `{ok, path}` |
+
+Canal exige: token ativo (e usuário ativo), canal marcado no token e canal ligado em `INTEGRACAO_*`. Falta de token ou token
+inválido = 401; canal não marcado ou desligado = 403. A linha vai para `01-Agenda/AAAA-MM-DD.md`, seção `## ✅ Feito`, no
+formato `- ✅ HH:MM · agente · tarefa (N min)`. O lock de escrita é só do processo Rust. Hook: `scripts/tania-registro.sh`.
+
 ## 8. Configuração
 
 ### 8.1 Variáveis de ambiente
