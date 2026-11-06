@@ -9,7 +9,7 @@ horário certo.
 
 ## Consome
 - Env: `EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `WHATSAPP_ALLOWED_NUMBERS`.
-- Endpoints `/api/finance/*` e `/api/reminders/*` (agent-data) para registrar pagamento/lembrete.
+- Endpoints `/api/reminders/*` (agent-data) para lembretes.
 - `runAgent` (agent-backend) para conversa livre (sem gatilho).
 
 ## Faz
@@ -18,16 +18,14 @@ horário certo.
 - **Classificação determinística antes do LLM** (SPEC §4.4):
   - `💡`/`ideia:` → nota em `Ideias/` (MinIO);
   - `✅`/`feito:` → anexar em `Agenda/YYYY-MM-DD.md` (MinIO);
-  - comprovante (PDF/imagem) → OCR/visão + registrar pagamento (Postgres) + guardar comprovante (MinIO);
-  - consulta ("quanto recebi...") → SQL em pagamentos;
+  - anexo (PDF/imagem) → guardar no vault (MinIO), sem LLM;
   - resto → `runAgent`.
 - Enviar confirmação via `sendText` ("Salvei X em Y").
 - Scheduler: lê `lembretes` devidos (`status=pending` e `quando <= now`) e envia; marca `sent`.
 
 ## NÃO faz
-- Criar endpoints financeiros ou o schema (é do agent-data).
+- Criar endpoints de dados ou o schema (é do agent-data).
 - Mexer no `VaultStore` (só usa a API).
-- Implementar OCR/visão sozinho (coordena com agent-spec: decisão SPEC §12).
 
 ## Pronto quando
 - Mensagem no WhatsApp gera a ação certa + confirmação.

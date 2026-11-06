@@ -10,7 +10,7 @@ docs estão sincronizados.
 1. Rodar `npm test` em `app/` e confirmar verde.
 2. Conferir que o código usa exatamente as assinaturas dos contratos:
    - assinatura do `VaultStore` × uso em `vault-api.mjs`/`agent.ts`;
-   - schema Postgres × endpoints `/api/finance|reminders`;
+   - schema Postgres × endpoints `/api/reminders|investimentos`;
    - env vars × código;
    - docs × código (SPEC §8, PLANO).
 3. Verificar que `SPEC.md` e `PLANO-ADAPTACAO.md` refletem o estado **real**.

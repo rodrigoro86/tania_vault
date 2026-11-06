@@ -10,7 +10,7 @@ direto como prompt de delegação). A carta-mestra está em [`../AGENTS.md`](../
 | agent-spec | [`agent-spec.md`](agent-spec.md) | SPEC, PLANO, AGENTS | todas |
 | agent-storage | [`agent-storage.md`](agent-storage.md) | `app/server/storage/` | 1 |
 | agent-backend | [`agent-backend.md`](agent-backend.md) | `server.mjs`, `vault-api.mjs`, `agent.ts` | 1–2 |
-| agent-data | [`agent-data.md`](agent-data.md) | Postgres + financeiro + lembretes | 2 |
+| agent-data | [`agent-data.md`](agent-data.md) | Postgres + lembretes + investimentos | 2 |
 | agent-evolution | [`agent-evolution.md`](agent-evolution.md) | WhatsApp webhook + scheduler | 3 |
 | agent-frontend | [`agent-frontend.md`](agent-frontend.md) | `app/src/` | 2 |
 | agent-reviewer | [`agent-reviewer.md`](agent-reviewer.md) | (transversal) testes + sync gate | todas |

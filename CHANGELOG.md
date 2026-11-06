@@ -5,8 +5,14 @@ versões em [SemVer](https://semver.org/lang/pt-BR/). O detalhe do front fica em
 
 ## [Não lançado]
 
+### Adicionado
+- 🧩 **Tools**: funcionalidades viram serviços plugáveis (manifesto + funções MCP do agente + páginas em iframe). Registro pelo env (`TANIA_TOOLS`) ou pela tela ⚙ → Tools, config por tool cifrada, proxy `/tools/{id}/ui|api/*` e `/api/core/config` no backend Rust. Spec `docs/superpowers/specs/2026-11-06-tools-design.md`.
+
 ### Alterado
+- ✅ ClickUp vira a primeira tool (`app/tools/clickup/`, serviço `tool-clickup`). As funções do agente passam a se chamar `clickup__clickup_tasks` e `clickup__clickup_task`; o `CLICKUP_TOKEN` sai das configurações gerais para a config da tool (migração `103` copia o valor).
+- 🚀 Produção (`app/build.yml`) passa a rodar o backend Rust na frente do Node e a tool ClickUp; o login vira por usuário (`TANIA_BOOTSTRAP_ADMIN` na 1ª subida).
 - 🦀 Backend Rust (F3a): `/api/reminders` (listar, criar, cancelar) e as rotas simples de `/api/investimentos` (movimentos: listar e apagar; ordens; análises; alertas; acompanhadas: listar e remover; relatórios: listar) passam a ser atendidos direto no Postgres, com o mesmo JSON do Node. O resto segue no Node.
+- 📄 Financeiro (aluguéis, recebimentos, Carnê-Leão) sai da spec do projeto (SPEC, AGENTS, README, papéis dos agentes); volta no futuro como tool separada. O código atual continua no app.
 - SPEC §12 fechado: lembretes só pelo WhatsApp, comprovantes sem leitura automática, backup só pelo versionamento do bucket.
 
 ## [1.0.0] — 2026-11-06

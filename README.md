@@ -1,7 +1,7 @@
 # Tania — assistente pessoal
 
 Assistente pessoal auto-hospedado. Você conversa com ele pelo WhatsApp e pelo navegador; ele guarda notas num vault
-estilo Obsidian, registra recebimentos de aluguel, dispara lembretes, acompanha tarefas do ClickUp e tem um terminal
+estilo Obsidian, dispara lembretes, acompanha investimentos, acompanha tarefas do ClickUp e tem um terminal
 com agente LLM que lê e edita as notas por você.
 
 > Projeto pessoal, em evolução. O backend está migrando de Node para Rust (detalhes em [Migração](#migração-para-rust)).
@@ -13,10 +13,12 @@ com agente LLM que lê e edita as notas por você.
 - **Agente LLM no terminal:** qualquer provedor compatível com a API da OpenAI (DeepSeek, OpenAI, Gemini, OpenRouter,
   Groq, Ollama ou um servidor local). Ele lê o vault, propõe mudanças e só aplica depois que você aprova.
 - **WhatsApp** (via [Evolution API](https://github.com/EvolutionAPI/evolution-api)): `💡 ideia:` vira nota,
-  `✅ feito:` entra no diário do dia, foto ou PDF vira comprovante, e o resto vai para o agente. Só números
+  `✅ feito:` entra no diário do dia, foto ou PDF vira anexo no vault, e o resto vai para o agente. Só números
   autorizados são atendidos.
-- **ClickUp** (só leitura): painel e lista de tarefas por pessoa, projeto e prazo, com relatório em Word e slides.
-- **Financeiro e lembretes** no Postgres.
+- **Tools plugáveis:** cada funcionalidade extra é um serviço com manifesto, funções do agente (MCP) e páginas; o admin
+  cadastra tools externas em ⚙ → Tools. Spec em [docs/superpowers/specs/2026-11-06-tools-design.md](docs/superpowers/specs/2026-11-06-tools-design.md).
+- **ClickUp** (tool, só leitura): painel e lista de tarefas por pessoa, projeto e prazo, com relatório em Word e slides.
+- **Lembretes e investimentos** no Postgres.
 - **Multiusuário:** login por usuário e senha (argon2id), sessões revogáveis e papel de admin.
 - **Configuração pela tela:** chaves das integrações (cifradas com AES-256-GCM) e provedores do agente ficam no banco,
   editáveis em ⚙ Configurações e 🤖 Agents.
@@ -34,7 +36,8 @@ navegador ──► frontend (nginx) ──► backend (Rust/axum) ──► leg
 |---|---|
 | [`app/src/`](app/src/) | Front React + Vite |
 | [`backend/`](backend/) | Backend Rust: login, usuários, sessões, vault, anexos, configurações, agents; repassa ao Node o que ainda não foi portado |
-| [`app/server/`](app/server/) | Backend Node (legado): agente LLM, ClickUp, WhatsApp, financeiro, lembretes |
+| [`app/server/`](app/server/) | Backend Node (legado): agente LLM, WhatsApp, lembretes, investimentos |
+| [`app/tools/`](app/tools/) | Tools internas (serviços com manifesto + MCP + páginas): ClickUp |
 | [`docker-compose.yml`](docker-compose.yml) | Stack local completa |
 | [`SPEC.md`](SPEC.md) | Requisitos, rotas, schema e variáveis de ambiente |
 | [`AGENTS.md`](AGENTS.md) | Donos de cada parte e regras para manter código e docs em sincronia |
@@ -93,8 +96,6 @@ defina a variável no shell ou num `.env` na raiz:
 > HTTPS na frente. Se algum padrão já foi usado em produção, substitua-o antes de publicar o repositório. Perder a `TANIA_CONFIG_KEY` torna ilegíveis os segredos já salvos.
 
 Limitações conhecidas da stack local:
-- O financeiro usa um schema `alugueis` de outro projeto; localmente ele é só um stub
-  ([docker/postgres-init](docker/postgres-init/)), então as telas de aluguel dão erro até você criar o schema real.
 - Os relatórios em slides usam um modelo HTML que fica no seu vault, em
   `99-Meta/attachments/Apresentacoes/Modelo-apresentacao.html`.
 
@@ -139,7 +140,7 @@ sessão são os mesmos, então o front não percebe a troca.
 | F0–F2 | Proxy, login, rate limit, storage (local e S3) e rotas do vault | feita |
 | F2c–F2e | Usuários e sessões, configuração no banco, provedores do agente, menu em faixa de ícones | feita |
 | F3a | Lembretes e rotas simples de investimentos direto no Postgres | feita |
-| F3b | Investimentos (resumo, movimentos, acompanhar, relatórios) e financeiro (espera o schema `alugueis` real num banco de teste) | a fazer |
+| F3b | Investimentos (resumo, movimentos, acompanhar, relatórios) | a fazer |
 | F4 | WhatsApp (Evolution) | a fazer |
 | F5 | Agente LLM e ClickUp | a fazer |
 | F6 | Servidor MCP com as ferramentas da Tania | a fazer |
@@ -147,7 +148,9 @@ sessão são os mesmos, então o front não percebe a troca.
 
 ## Deploy
 
-[`app/build.yml`](app/build.yml) é um stack de Docker Swarm atrás do Traefik (ainda com o backend Node). O workflow
+[`app/build.yml`](app/build.yml) é um stack de Docker Swarm atrás do Traefik: backend Rust na frente, Node (legado) e a tool
+ClickUp atrás. Na primeira subida o login passa a ser por usuário: defina `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`,
+`TANIA_CONFIG_KEY` e `TANIA_TOOL_SECRET_CLICKUP` no `.env` do servidor e construa as imagens `tania-app` e `tania-backend`. O workflow
 [`.github/workflows/build.yml`](.github/workflows/build.yml) testa e faz o deploy por SSH; configure no GitHub a
 variável `APP_DOMAIN` e os secrets `SSH_HOST`, `SSH_USER`, `SSH_KEY` (e, opcionais, `SSH_PORT`, `DEPLOY_DIR`,
 `DEPLOY_TOKEN`).

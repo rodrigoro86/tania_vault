@@ -4,7 +4,7 @@ Front estilo Obsidian para ler e editar as notas do vault, com terminal de agent
 exportação para Word/PDF/slides.
 
 - `src/`: front React (Vite)
-- `server/`: backend Node legado (agente, ClickUp, WhatsApp, financeiro, lembretes, investimentos); some na F7
+- `server/`: backend Node legado (agente, ClickUp, WhatsApp, lembretes, investimentos); some na F7
 - Versões e mudanças: [CHANGELOG.md](CHANGELOG.md)
 
 Para subir a stack inteira (front, backend Rust, Node, Postgres e bucket), veja o [README da raiz](../README.md).

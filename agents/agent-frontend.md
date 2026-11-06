@@ -1,7 +1,7 @@
 # agent-frontend — UI Obsidian web
 
-**Papel:** interface de leitura/edição das notas + telas novas (Financeiro,
-Lembretes), consumindo sempre a API (nunca o storage direto).
+**Papel:** interface de leitura/edição das notas + telas novas (Lembretes,
+Investimentos), consumindo sempre a API (nunca o storage direto).
 
 ## Dono de
 - `app/src/**` (App, components, styles, api.ts, vault.ts)
@@ -12,7 +12,7 @@ Lembretes), consumindo sempre a API (nunca o storage direto).
 
 ## Faz
 - Manter explorer, editor, propriedades, backlinks, tags, busca, anexos.
-- Telas novas: `Financeiro` (lista, lançamento, resumo mensal) e `Lembretes`.
+- Telas novas: `Lembretes` e `Investimentos`.
 - Ajustar `src/vault.ts` para carregar notas só via `/api/notes` (sem o glob de build, em coordenação com agent-storage).
 - Rota + item de menu para as telas novas.
 

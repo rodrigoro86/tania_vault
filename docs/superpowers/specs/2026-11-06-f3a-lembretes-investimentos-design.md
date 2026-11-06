@@ -25,7 +25,7 @@ Qualquer usuário logado (sem exigir admin), como no Node. Sem banco → 503 "ba
 - Agendadores: envio de lembretes no WhatsApp (F4) e rotinas de investimentos (F5, usam LLM).
 - `GET /api/investimentos/resumo`, `POST …/movimentos` (precisam do cálculo da carteira), `POST …/acompanhadas` (brapi),
   `POST …/relatorios` (LLM): vão na F3b.
-- **Financeiro** (`/api/finance/*`): o schema `alugueis` é do `api_assistente_alugueis` e não existe localmente (só stub),
+- **Financeiro** (`/api/finance/*`): saiu da spec (SPEC §12) e não será portado; volta no futuro como tool separada.
   então não dá para testar. Fica para quando o schema real estiver num banco de teste.
 - As tools do agente seguem chamando os módulos Node direto.
 

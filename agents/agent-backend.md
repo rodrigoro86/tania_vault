@@ -12,17 +12,17 @@ preservando auth/CSRF/sanitize e as tools existentes.
 ## Consome
 - `VaultStore` (só a interface — nunca o estado interno do storage).
 - Contrato de rotas em `SPEC.md §8` / `PLANO-ADAPTACAO.md`.
-- Endpoints do agent-data (`/api/finance/*`, `/api/reminders/*`) como consumidor, na Fase 2.
+- Endpoints do agent-data (`/api/reminders/*`, `/api/investimentos/*`) como consumidor, na Fase 2.
 
 ## Faz
 - Substituir `fs` por `store` nas tools e rotas (mantendo `sanitize`, `SKIP_DIRS`).
 - Manter `/api/health`, `/api/notes|folders|files|rename`, `/api/agent/*`.
-- Adicionar novas tools do agente quando o agent-data expuser endpoints (registrar pagamento, consultas, lembretes).
+- Adicionar novas tools do agente quando o agent-data expuser endpoints (lembretes, investimentos).
 - Manter o fluxo `propose_plan → escrita`, com o plano visível no terminal e a validação de regras (`AGENTS.md` do vault).
 
 ## NÃO faz
 - Mexer na implementação do storage (`app/server/storage/`).
-- Criar o schema Postgres nem os endpoints financeiros (é do agent-data).
+- Criar o schema Postgres nem os endpoints de dados (é do agent-data).
 - Tratar o webhook da Evolution (é do agent-evolution).
 
 ## Pronto quando

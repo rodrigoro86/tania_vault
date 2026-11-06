@@ -29,9 +29,9 @@ Define **quem é dono de quê** no projeto Tania_Assistente e as regras para que
 | **agent-spec** | `SPEC.md`, `AGENTS.md` | manter docs = decisões travadas; registrar mudanças de contrato | código em `app/` |
 | **agent-storage** | `app/server/storage/` | `VaultStore`: `LocalFsStore` + `S3Store` (MinIO), presigned URL, versioning | Postgres, Evolution, UI |
 | **agent-backend** | `app/server/server.mjs`, `vault-api.mjs`, `auth.mjs`, `rate-limit.mjs`, `agent.ts`, `agent/*`, `clickup*.ts` | rotas `/api/*`, tools do agente, auth/CSRF, ClickUp | storage (usa só a interface), schema Postgres |
-| **agent-data** | `server/db.mjs`, `server/migrations/`, `server/finance.mjs`, `server/reminders.mjs`, `server/investimentos*.mjs` | schema Postgres, endpoints `/api/finance/*`, `/api/reminders/*` e `/api/investimentos/*`, schedulers de lembretes e de investimentos | `VaultStore`, webhook Evolution |
-| **agent-evolution** | `server/evolution.mjs`, `server/whatsapp.mjs` | webhook WhatsApp, whitelist, sendText | criar endpoints financeiros |
-| **agent-frontend** | `app/src/` | UI Obsidian web + telas (Financeiro, Lembretes) | alterar contratos de API sem passar pelo agent-spec |
+| **agent-data** | `server/db.mjs`, `server/migrations/`, `server/reminders.mjs`, `server/investimentos*.mjs` (e `server/finance.mjs`, legado fora da spec) | schema Postgres, endpoints `/api/reminders/*` e `/api/investimentos/*`, schedulers de lembretes e de investimentos | `VaultStore`, webhook Evolution |
+| **agent-evolution** | `server/evolution.mjs`, `server/whatsapp.mjs` | webhook WhatsApp, whitelist, sendText | criar endpoints de dados (é do agent-data) |
+| **agent-frontend** | `app/src/` | UI Obsidian web + telas (Lembretes, Investimentos) | alterar contratos de API sem passar pelo agent-spec |
 | **agent-reviewer** | (transversal) | revisar diffs, rodar `npm test`, aplicar o sync gate (§4) | implementar features grandes sozinho |
 
 ### Mapa rápido de arquivos → dono
@@ -44,11 +44,12 @@ app/server/auth + rate-limit   → agent-backend
 app/server/agent.ts + agent/*  → agent-backend
 app/server/clickup*.ts         → agent-backend
 app/server/storage/**          → agent-storage
-app/server/db + migrations + finance + reminders + investimentos* → agent-data
+app/server/db + migrations + reminders + investimentos* → agent-data
 app/server/evolution + whatsapp → agent-evolution
+app/tools/<id>/**               → dono do domínio da tool (clickup → agent-backend)
 backend/** (Rust, migração)    → mesmo dono do domínio em app/server: http/+agent/+tools/+mcp/ → agent-backend,
-                                 storage/ → agent-storage, db/+finance/+reminders/+investimentos/ → agent-data,
-                                 whatsapp/ → agent-evolution
+                                 storage/ → agent-storage, db/+reminders/+investimentos/ → agent-data,
+                                 whatsapp/ → agent-evolution, tools/ → agent-backend
 scripts/parity.mjs             → agent-reviewer
 SPEC.md / AGENTS.md            → agent-spec
 tudo (review + testes)           → agent-reviewer
@@ -60,12 +61,13 @@ tudo (review + testes)           → agent-reviewer
    read / readText / write / writeText / remove / removeDir / mkdir / rename / exists /
    dirExists / isEmptyDir / stat / readStream / presign`. Quem muda a assinatura avisa
    agent-backend (consumidor) e agent-spec (docs).
-2. **API REST** (rotas em `app/server/server.mjs` e `vault-api.mjs`): `/api/notes|folders|files|rename|agent|clickup|finance|investimentos|reminders|evolution|health`; no backend Rust também `/api/auth/*`, `/api/users` (SPEC §7.7) e `/api/config` (SPEC §7.8) e `/api/agents` (SPEC §7.9); `/api/reminders` e parte de `/api/investimentos` já são atendidos pelo Rust (`backend/src/reminders.rs`, `investimentos.rs`, dono agent-data; spec `docs/superpowers/specs/2026-11-06-f3a-lembretes-investimentos-design.md`).
-3. **Schema Postgres** (`app/server/migrations/`, SPEC §7.6): `lembretes`, `comprovantes` (vínculo extrato ↔ arquivo), `usuarios`, `sessoes`, `configuracoes` e `agentes_config` (migrações `100_`–`102_` em `backend/migrations/`, dono agent-data); financeiro no schema `alugueis`, cujo dono é `api_assistente_alugueis`; carteiras no schema `investimentos` (SPEC §13). As tabelas `public.imoveis/inquilinos/contratos/pagamentos` estão fora de uso.
-4. **Env vars** (SPEC §8.1): `VAULT_STORAGE`, `RUSTFS_*` (aceita `MINIO_*`), `DATABASE_URL`, `EVOLUTION_*`, `WHATSAPP_ALLOWED_NUMBERS`, `BRAPI_TOKEN`, `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`, `TANIA_CONFIG_KEY` (`VAULT_AUTH` só no Node legado). O Compose não fornece `TANIA_CONFIG_KEY` padrão: salvar segredos exige chave própria no `.env` da raiz (SPEC §8.1).
+2. **API REST** (rotas em `app/server/server.mjs` e `vault-api.mjs`): `/api/notes|folders|files|rename|agent|investimentos|reminders|evolution|health`; no backend Rust também `/api/tools`, `/tools/{id}/ui|api/*` e `/api/core/*` (SPEC §7.10), `/api/auth/*`, `/api/users` (SPEC §7.7) e `/api/config` (SPEC §7.8) e `/api/agents` (SPEC §7.9); `/api/reminders` e parte de `/api/investimentos` já são atendidos pelo Rust (`backend/src/reminders.rs`, `investimentos.rs`, dono agent-data; spec `docs/superpowers/specs/2026-11-06-f3a-lembretes-investimentos-design.md`).
+3. **Schema Postgres** (`app/server/migrations/`, SPEC §7.6): `lembretes`, `usuarios`, `sessoes`, `configuracoes`, `agentes_config`, `tools` e `tools_config` (migrações `100_`–`103_` em `backend/migrations/`, dono agent-data); carteiras no schema `investimentos` (SPEC §13). O financeiro (schema `alugueis`, tabela `comprovantes`, `/api/finance/*`, `finance.mjs`) saiu da spec e volta no futuro como tool separada (SPEC §12); o código legado continua no app até lá.
+4. **Env vars** (SPEC §8.1): `VAULT_STORAGE`, `RUSTFS_*` (aceita `MINIO_*`), `DATABASE_URL`, `EVOLUTION_*`, `WHATSAPP_ALLOWED_NUMBERS`, `BRAPI_TOKEN`, `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`, `TANIA_CONFIG_KEY`, `TANIA_TOOLS` + `TANIA_TOOL_SECRET_<ID>` (`VAULT_AUTH` só no Node legado). O Compose não fornece `TANIA_CONFIG_KEY` padrão: salvar segredos exige chave própria no `.env` da raiz (SPEC §8.1).
 5. **Gatilhos** (`app/server/whatsapp.mjs`): `💡`/`ideia:` → `05-Ideias/`; `✅`/`feito:` → `01-Diario/YYYY-MM-DD.md` (um arquivo por dia);
-   imagem/PDF → `COMPROVANTES_DIR`, sem passar pelo LLM (dados do recebimento vêm da legenda ou da conversa);
+   imagem/PDF → `COMPROVANTES_DIR`, sem passar pelo LLM;
    resto, inclusive consultas → agente.
+6. **Tools** (SPEC §7.10, `backend/src/tools/`): contrato `manifest.json` + `/mcp` + `/ui/*` + `/api/*` com `x-tania-tool-secret`; quem muda o contrato avisa agent-spec. Tool nova não mexe no núcleo.
 
 ## 4. Protocolo de sincronização (Sync gate)
 
@@ -95,7 +97,7 @@ agent-data     ─┘        │
 ```
 
 - **Fase 1** = agent-storage (fases em SPEC §11).
-- **Fase 2** = agent-data + agent-backend (tools) + agent-frontend (telas).
+- **Fase 2** = agent-data (lembretes) + agent-backend (tools) + agent-frontend (telas).
 - **Fase 3** = agent-evolution.
 - **Fase 4** = todos + agent-reviewer (hardening).
 

@@ -1,29 +1,26 @@
-# agent-data — Postgres + financeiro + lembretes
+# agent-data — Postgres + lembretes + investimentos
 
-**Papel:** dono dos dados estruturados: schema Postgres e endpoints de financeiro
-(aluguéis/Carnê-Leão) e lembretes.
+**Papel:** dono dos dados estruturados: schema Postgres e endpoints de lembretes
+e investimentos. O financeiro saiu da spec (SPEC §12).
 
 ## Dono de
 - `app/server/db.*` (pool/query)
 - migrations do schema
-- `app/server/finance.ts`
-- `app/server/reminders.ts`
+- `app/server/reminders.mjs`
+- `app/server/investimentos*.mjs`
 
 ## Fornece (contrato)
-- Schema (PLANO §5): `imoveis`, `inquilinos`, `contratos`, `pagamentos`, `lembretes`.
-- Endpoints: `/api/finance/*` (imoveis, inquilinos, contratos, pagamentos, `resumo` mensal) e `/api/reminders/*`.
+- Schema (SPEC §7.6, §13): `lembretes` e o schema `investimentos`.
+- Endpoints: `/api/reminders/*` e `/api/investimentos/*`.
 
 ## Consome
 - Env: `DATABASE_URL`.
 - Driver: `pg` (+ migrations, ex.: `node-pg-migrate` ou Drizzle).
 
 ## Faz
-- Aplicar o schema §5 (com índices).
-- CRUD de imóveis/inquilinos/contratos/pagamentos.
-- `resumo mensal` via SQL (`select sum(valor) from pagamentos where data between ...`).
-- Regras de negócio: **boleto ≠ comprovante** (não lança pagamento de boleto), sem acesso bancário.
+- Aplicar as migrações (com índices).
 - CRUD de lembretes (`status: pending|sent|cancelled`, `canal`, `recorrencia`).
-- Expor os endpoints para o agent-backend criar as tools e o agent-evolution registrar pagamento por mensagem.
+- Expor os endpoints para o agent-backend criar as tools.
 
 ## NÃO faz
 - Mexer no `VaultStore`.
@@ -31,6 +28,5 @@
 - Fazer UI (só expõe endpoints; as telas são do agent-frontend).
 
 ## Pronto quando
-- Registrar pagamento e responder "quanto recebi em outubro?" lendo do Postgres.
 - Lembretes criados/listados/cancelados via API.
-- `npm test` verde (testes de financeiro/lembretes).
+- `npm test` verde (testes de lembretes/investimentos).

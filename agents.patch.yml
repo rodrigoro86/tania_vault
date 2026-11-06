@@ -48,7 +48,7 @@
           model: model-b
           reasoningEffort: high
 
-    # ---- data: Postgres + financeiro + lembretes ----
+    # ---- data: Postgres + lembretes + investimentos ----
     - id: agent-data
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
