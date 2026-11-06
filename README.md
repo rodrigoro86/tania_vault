@@ -138,7 +138,8 @@ sessão são os mesmos, então o front não percebe a troca.
 |---|---|---|
 | F0–F2 | Proxy, login, rate limit, storage (local e S3) e rotas do vault | feita |
 | F2c–F2e | Usuários e sessões, configuração no banco, provedores do agente, menu em faixa de ícones | feita |
-| F3 | Postgres: financeiro, lembretes, investimentos | a fazer |
+| F3a | Lembretes e rotas simples de investimentos direto no Postgres | feita |
+| F3b | Investimentos (resumo, movimentos, acompanhar, relatórios) e financeiro (espera o schema `alugueis` real num banco de teste) | a fazer |
 | F4 | WhatsApp (Evolution) | a fazer |
 | F5 | Agente LLM e ClickUp | a fazer |
 | F6 | Servidor MCP com as ferramentas da Tania | a fazer |

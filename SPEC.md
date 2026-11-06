@@ -17,7 +17,7 @@
 - **Canal principal: WhatsApp via Evolution API** (ponte Baileys), com **whitelist de números obrigatória** (o gateway recusa tudo até a lista ser configurada; o Node reforça). Telegram fica como **alternativa/contingência**.
 - **Classificação por gatilhos simples** para evitar erro de classificação: `💡`/`ideia:` → `Ideias/`; `✅`/`feito:` → nota do dia em `01-Diario/YYYY-MM-DD.md`; comprovante encaminhado → `Financeiro/` + lançamento no Postgres. **Sempre confirmar onde salvou.**
 - **Financeiro**: registrar recebimento de aluguel apenas a partir de **comprovante de Pix/pagamento** (boleto NÃO é comprovante). O agente **não tem acesso à conta bancária** — só lê o comprovante e anota data, inquilino, imóvel e valor.
-- **Lembretes**: tabela `lembretes` no Postgres + **scheduler** no Node que dispara via WhatsApp. Google Calendar fica como opcional.
+- **Lembretes**: tabela `lembretes` no Postgres + **scheduler** no Node que dispara via WhatsApp (sem Google Calendar, §12).
 - **Privacidade crítica**: a API do DeepSeek processa dados em servidores de terceiros; comprovantes contêm CPF/dados de inquilinos. Considerar **OCR local** / modelo separado para a parte financeira.
 - **Riscos já mapeados**: banimento do WhatsApp (número pré-pago + whitelist); DeepSeek pode não ler imagens (exige OCR/modelo com visão — validar); vazamento de CPF a terceiros.
 
@@ -122,7 +122,7 @@ O nome "Tania" refere-se à **persona do assistente**: uma figura que acompanha 
 | **Postgres** | Dados estruturados: imóveis, inquilinos, contratos, pagamentos, lembretes. | Servidor do usuário. |
 | **Evolution API** | Ponte WhatsApp (Baileys); recebe/envia via REST + webhook. | Servidor do usuário (já subida). |
 | **DeepSeek (LLM)** | Modelo de linguagem que interpreta intenção, extrai dados e gera respostas. | Substituível por OpenRouter/Ollama via `agent.config.json`. |
-| **Camada de OCR/Visão** | Extrai texto de comprovantes (PDF/imagem). | A definir (seção 12): modelo com visão ou OCR local. |
+| **Camada de OCR/Visão** | Extrai texto de comprovantes (PDF/imagem). | Fora da v1 (§12): comprovante é guardado sem leitura automática. |
 | **Scheduler** | Loop/cron que lê `lembretes` devidos e dispara via Evolution. | `app/server/scheduler.ts` (novo). |
 
 > O **Hermes Agent não é o cérebro** desta arquitetura. O cérebro é o agente próprio do front (`server/agent.ts`). O Hermes permanece apenas como uma opção complementar futura (não recomendada por ora, para evitar duplicação).
@@ -634,11 +634,12 @@ WHATSAPP_ALLOWED_NUMBERS=5511999999999
 
 ## 12. Decisões em aberto / Perguntas pendentes
 
-> Pendências reais que **não bloqueiam as Fases 1–2**, mas precisam ser resolvidas antes de fechar v1.
+Nenhuma decisão aberta. Fechadas em 2026-11-06:
 
-1. **Lembretes**: só mensagem WhatsApp (zero dependência) ou também espelhar no **Google Calendar** (view/push nativo)?
-2. **Comprovantes com visão**: usar **modelo com visão** na própria API do DeepSeek (dados vão para terceiros) ou **OCR local** (mais privado)?
-3. **Espelho git**: manter um **mirror local do bucket** como backup extra, ou confiar **só no versioning do MinIO**?
+1. **Lembretes**: só mensagem WhatsApp. Google Calendar fica fora.
+2. **Comprovantes**: sem leitura automática (nem visão, nem OCR). O arquivo vai para `COMPROVANTES_DIR` sem passar pelo LLM;
+   os dados do recebimento vêm da legenda ou da conversa. Isso substitui FR-33/34/35 e a "Camada OCR/Visão" de §4.
+3. **Backup do vault**: só o versioning do bucket, sem espelho git local.
 
 ---
 

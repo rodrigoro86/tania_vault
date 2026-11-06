@@ -5,6 +5,10 @@ versões em [SemVer](https://semver.org/lang/pt-BR/). O detalhe do front fica em
 
 ## [Não lançado]
 
+### Alterado
+- 🦀 Backend Rust (F3a): `/api/reminders` (listar, criar, cancelar) e as rotas simples de `/api/investimentos` (movimentos: listar e apagar; ordens; análises; alertas; acompanhadas: listar e remover; relatórios: listar) passam a ser atendidos direto no Postgres, com o mesmo JSON do Node. O resto segue no Node.
+- SPEC §12 fechado: lembretes só pelo WhatsApp, comprovantes sem leitura automática, backup só pelo versionamento do bucket.
+
 ## [1.0.0] — 2026-11-06
 
 Primeira versão pública.

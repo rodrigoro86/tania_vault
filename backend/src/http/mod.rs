@@ -78,6 +78,10 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::settings::routes::routes())
         // provedores do agente LLM, também guardados no banco
         .merge(crate::agents::routes())
+        // lembretes: CRUD direto no Postgres; o scheduler de envio continua no Node
+        .merge(crate::reminders::routes())
+        // investimentos: rotas simples no Postgres; resumo, POSTs e rotinas ficam no Node
+        .merge(crate::investimentos::routes())
         // Tudo o mais é repassado ao Node, em qualquer método/caminho.
         .fallback(proxy)
         // ordem: gate (por fora) -> rate limit -> csrf -> rotas/proxy.
