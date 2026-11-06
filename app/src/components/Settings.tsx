@@ -28,6 +28,9 @@ export function ConfigTabs() {
       <NavLink end to="/tools-admin" className={cls}>
         Tools
       </NavLink>
+      <NavLink end to="/tokens" className={cls}>
+        Tokens
+      </NavLink>
     </nav>
   );
 }

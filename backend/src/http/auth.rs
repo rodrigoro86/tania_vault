@@ -362,6 +362,12 @@ pub async fn gate(
         return gate_tool(&state, request, next).await;
     }
 
+    // 3.6) canais de integração (MCP e registro na agenda): token `tania_…`
+    //      próprio, sem sessão. Quem valida é `tokens::auth`.
+    if (pathname == "/mcp" || pathname == "/api/agenda/registro") && request.method() == Method::POST {
+        return gate_integracao(&state, request, next).await;
+    }
+
     // 4) sem Postgres não existe sessão possível: só loopback entra.
     let Some(db) = state.db.clone() else {
         // Sem banco o Node não tem como autenticar ninguém: atrás do proxy ele
@@ -486,6 +492,37 @@ pub async fn gate(
         request.extensions_mut().insert(SessionToken(token));
     }
     next.run(request).await
+}
+
+/// Portão dos canais de integração: o token `tania_…` precisa estar ativo e
+/// ter o canal marcado e ligado nas Integrações (`tokens::auth::autorizar`).
+async fn gate_integracao(state: &AppState, mut request: Request, next: Next) -> Response {
+    let Some(db) = state.db.clone() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "ok": false, "error": "banco não configurado" })),
+        )
+            .into_response();
+    };
+    let canal = if request.uri().path() == "/mcp" {
+        crate::tokens::auth::Canal::Mcp
+    } else {
+        crate::tokens::auth::Canal::Hook
+    };
+    let Some(token) = crate::tokens::auth::token_do_header(request.headers()).map(str::to_string) else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "ok": false, "error": "token ausente" })),
+        )
+            .into_response();
+    };
+    match crate::tokens::auth::autorizar(&db, &token, canal).await {
+        Ok(auth) => {
+            request.extensions_mut().insert(auth);
+            next.run(request).await
+        }
+        Err(err) => err.into_response(),
+    }
 }
 
 fn lock<T>(map: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {

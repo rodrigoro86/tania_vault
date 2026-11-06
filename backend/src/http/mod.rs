@@ -82,6 +82,10 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::reminders::routes())
         // tools registradas (env + banco) e leitura do manifesto de cada uma
         .merge(crate::tools::routes::routes())
+        // tokens de integração (MCP/Hook) e chaves gerais de integração
+        .merge(crate::tokens::routes::routes())
+        // canais de integração: /mcp e /api/agenda/registro (token próprio, no portão)
+        .merge(crate::tokens::routes::routes_integracao())
         // Tudo o mais é repassado ao Node, em qualquer método/caminho.
         .fallback(proxy)
         // ordem: gate (por fora) -> rate limit -> csrf -> rotas/proxy.

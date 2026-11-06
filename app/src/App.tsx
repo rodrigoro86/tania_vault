@@ -9,6 +9,7 @@ import UsersPage from './components/Users';
 import ResizeHandle from './components/ResizeHandle';
 import SettingsPage from './components/Settings';
 import ToolsPage from './components/ToolsPage';
+import TokensPage from './components/Tokens';
 import AgentsPage from './components/Agents';
 import Properties from './components/Properties';
 import Terminal from './components/Terminal';
@@ -102,7 +103,7 @@ function Layout() {
   const rawPath = location.pathname.replace(/^\//, '');
   // /tag/x e /busca/x não são notas: sem esta guarda, findNote('tag/x')
   // resolve para uma nota chamada "x" e o breadcrumb mostra a nota errada
-  const isIndexRoute = /^(tag|busca|arquivo|tarefas|painel|t|tools-admin|usuarios|configuracoes|agentes)(\/|$)/.test(rawPath);
+  const isIndexRoute = /^(tag|busca|arquivo|tarefas|painel|t|tools-admin|tokens|usuarios|configuracoes|agentes)(\/|$)/.test(rawPath);
   const filePath = rawPath.startsWith('arquivo/') ? safeDecode(rawPath.slice('arquivo/'.length)) : '';
   const note = isIndexRoute ? null : findNote(rawPath);
 
@@ -322,6 +323,7 @@ function Layout() {
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/tools-admin" element={<ToolsPage />} />
+            <Route path="/tokens" element={<TokensPage />} />
             <Route path="/agentes" element={<AgentsPage />} />
             <Route path="*" element={<NoteView key={note?.path ?? 'none'} note={note} onTerminal={vaultWritable ? openTerminalFor : undefined} />} />
           </Routes>

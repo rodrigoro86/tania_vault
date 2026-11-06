@@ -6,6 +6,7 @@ pub mod http;
 pub mod reminders;
 pub mod settings;
 pub mod storage;
+pub mod tokens;
 pub mod tools;
 pub mod users;
 pub mod vault;

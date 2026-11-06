@@ -6,6 +6,12 @@ A versão vale em `app/package.json` e aparece no site (rodapé do explorador e 
 
 Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.md`).
 
+## [Não lançado]
+
+### Adicionado
+- Aba **Tokens** em ⚙ Configurações: cria, ativa/desativa e revoga tokens de integração, e liga/desliga os canais MCP e Hook (admin). O token aparece uma única vez na criação.
+- Canais de integração: `POST /mcp` (ferramenta `registrar_atividade`) e `POST /api/agenda/registro` gravam a atividade em `01-Agenda/AAAA-MM-DD.md`, autenticados por token.
+
 ## [1.1.0] — 2026-11-06
 
 ### Adicionado
