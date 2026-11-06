@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ConfigTabs } from './Settings';
-import { Campo } from './Finance';
+import { Campo } from './Form';
 import { authApi } from '../api';
 import { ID_OK, recarregarTools, type Manifesto } from '../tools';
 

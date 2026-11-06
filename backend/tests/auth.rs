@@ -272,7 +272,7 @@ async fn sem_banco_loopback_passa_remoto_503_com_texto_novo() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(2),
         HeaderMap::new(),
@@ -385,7 +385,7 @@ async fn rate_limit_limita_a_api_por_ip_e_nao_conta_o_resto() {
         let response = call(
             state.clone(),
             Method::GET,
-            "/api/finance/resumo",
+            "/api/agent/status",
             Body::empty(),
             ip_a,
             HeaderMap::new(),
@@ -401,7 +401,7 @@ async fn rate_limit_limita_a_api_por_ip_e_nao_conta_o_resto() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip_a,
         HeaderMap::new(),
@@ -421,7 +421,7 @@ async fn rate_limit_limita_a_api_por_ip_e_nao_conta_o_resto() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip_b,
         HeaderMap::new(),
@@ -479,7 +479,7 @@ async fn com_banco_sem_sessao_redirect_401_e_pagina_de_login() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         HeaderMap::new(),
@@ -595,7 +595,7 @@ async fn sessao_valida_de_cookie_e_de_bearer_chega_ao_upstream() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         cookie_header(&token),
@@ -608,7 +608,7 @@ async fn sessao_valida_de_cookie_e_de_bearer_chega_ao_upstream() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         bearer_header(&token),
@@ -621,7 +621,7 @@ async fn sessao_valida_de_cookie_e_de_bearer_chega_ao_upstream() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         cookie_header("token-que-nao-existe-no-banco"),
@@ -685,7 +685,7 @@ async fn logout_limpa_o_cookie_e_derruba_a_sessao_no_banco() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         cookie_header(&token),
@@ -861,7 +861,7 @@ async fn usuario_desativado_perde_a_sessao_e_nao_consegue_logar() {
     let response = call(
         state.clone(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         ip,
         cookie_header(&token),

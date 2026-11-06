@@ -783,7 +783,6 @@ export default function Sidebar({
                   </Link>
                 );
               })}
-              {/* Financeiro e Investimentos escondidos do menu; as telas seguem em #/financeiro e #/investimentos */}
             </div>
           )}
 

@@ -24,7 +24,6 @@ const Sidebar = (await server.ssrLoadModule('/src/components/Sidebar.tsx')).defa
 const NoteView = (await server.ssrLoadModule('/src/components/NoteView.tsx')).default;
 const Properties = (await server.ssrLoadModule('/src/components/Properties.tsx')).default;
 const SearchBox = (await server.ssrLoadModule('/src/components/SearchBox.tsx')).default;
-const FinancePage = (await server.ssrLoadModule('/src/components/Finance.tsx')).default;
 
 console.log('notes:', vault.notes.length, '| pastas na raiz:', vault.tree.children.size, '| backlinks:', vault.backlinks.size, '| tags:', vault.allTags.size);
 
@@ -42,9 +41,6 @@ for (const [name, comp, props] of [
   ['NoteView', NoteView, { note }],
   ['Properties', Properties, { note }],
   ['SearchBox', SearchBox, {}],
-  // tela 💰 Financeiro: sem banco ela mostra o aviso de carregamento, mas o
-  // render (imports, JSX, formatação) tem que passar
-  ['Finance', FinancePage, {}],
 ]) {
   try {
     const html = renderToString(React.createElement(MemoryRouter, null, React.createElement(comp, props)));

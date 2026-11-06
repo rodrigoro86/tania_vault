@@ -4,11 +4,11 @@
  * - Só quem é admin gerencia: lista, cria, edita (admin/ativo/senha) e apaga.
  * - Quem não é admin só consegue trocar a própria senha.
  * - Reusa as classes `fin-*` (fin-page, fin-titulo, fin-tabela, fin-table,
- *   fin-form, fin-actions) e `btn`/`btn ghost` do Financeiro: sem CSS novo.
+ *   fin-form, fin-actions) e `btn`/`btn ghost` (Form.tsx): sem CSS novo.
  */
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Campo, Janela } from './Finance';
+import { Campo, Janela } from './Form';
 import { ConfigTabs } from './Settings';
 import { authApi, usersApi, type Usuario } from '../api';
 

@@ -299,14 +299,14 @@ async fn fluxo_completo_admin() {
         "deveria haver mudança pendente"
     );
 
-    let brapi = body["itens"]
+    let groq = body["itens"]
         .as_array()
         .expect("itens")
         .iter()
         .find(|item| item["chave"].as_str() == Some("GROQ_API_KEY"))
         .expect("GROQ_API_KEY na lista");
-    assert_eq!(brapi["origem"].as_str().expect("origem"), "banco");
-    assert_eq!(brapi["valor"].as_str().expect("valor"), "••••9876");
+    assert_eq!(groq["origem"].as_str().expect("origem"), "banco");
+    assert_eq!(groq["valor"].as_str().expect("valor"), "••••9876");
 
     let corpo = body.to_string();
     assert!(
@@ -373,13 +373,13 @@ async fn fluxo_completo_admin() {
     .await;
     assert_eq!(response.status(), StatusCode::OK);
     let body = read_json(response).await;
-    let brapi = body["itens"]
+    let groq = body["itens"]
         .as_array()
         .expect("itens")
         .iter()
         .find(|item| item["chave"].as_str() == Some("GROQ_API_KEY"))
         .expect("GROQ_API_KEY na lista");
-    assert_ne!(brapi["origem"].as_str().expect("origem"), "banco");
+    assert_ne!(groq["origem"].as_str().expect("origem"), "banco");
 
     // chave desconhecida também no DELETE
     let response = call(

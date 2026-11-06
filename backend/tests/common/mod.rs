@@ -1,5 +1,5 @@
 //! Helpers compartilhados pelos testes de API que precisam de Postgres
-//! (`reminders_api.rs`, e mais tarde `investimentos_api.rs`).
+//! (`reminders_api.rs`).
 //!
 //! `pool()` deixa o banco pronto dos dois lados: as migrações do Rust
 //! (`100_`–`102_`) e as do Node que o domínio usa (`001`, `003`, `004`),
@@ -27,23 +27,11 @@ use tania::users::repo;
 
 // --- banco de teste -----------------------------------------------------------
 
-/// Migrações do Node que o domínio de testes precisa: `lembretes` (001),
-/// `movimentos`/`ordens`/`alertas`/`analises`/`relatorios` (003) e
-/// `acompanhadas` (004).
-const MIGRACOES_NODE: &[(&str, &str)] = &[
-    (
-        "001_init.sql",
-        include_str!("../../../app/server/migrations/001_init.sql"),
-    ),
-    (
-        "003_investimentos.sql",
-        include_str!("../../../app/server/migrations/003_investimentos.sql"),
-    ),
-    (
-        "004_acompanhadas.sql",
-        include_str!("../../../app/server/migrations/004_acompanhadas.sql"),
-    ),
-];
+/// Migrações do Node que o domínio de testes precisa: `lembretes` (001).
+const MIGRACOES_NODE: &[(&str, &str)] = &[(
+    "001_init.sql",
+    include_str!("../../../app/server/migrations/001_init.sql"),
+)];
 
 /// Aplica as migrações do Node ainda não registradas, igual a
 /// `tania::db::migrate`: lock advisory por transação + insert em

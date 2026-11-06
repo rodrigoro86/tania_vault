@@ -1,6 +1,6 @@
 /**
  * whatsapp-smoke.mjs — simula o webhook da Evolution (sem enviar WhatsApp).
- * Prova o fluxo: apikey → whitelist → classificação "ideia" → LLM → nota no MinIO.
+ * Prova o fluxo: apikey → whitelist → classificação "melhoria" → LLM → nota no MinIO.
  * Uso: node scripts/whatsapp-smoke.mjs   (EVOLUTION_DRY_RUN=1)
  */
 import path from 'node:path';
@@ -31,7 +31,7 @@ const payload = {
   apikey: process.env.EVOLUTION_API_KEY,
   data: {
     key: { remoteJid: `${number}@s.whatsapp.net`, fromMe: false, id },
-    message: { conversation: `escreva uma ideia sobre um app para controlar aluguéis de imóveis (${id})` },
+    message: { conversation: `escreva uma melhoria: exportar o relatório de testes em CSV (${id})` },
     messageType: 'conversation',
   },
 };
@@ -57,17 +57,17 @@ console.log('POST /api/evolution/webhook (apikey + número', number + ')');
 await handleEvolutionWebhook(req, res);
 console.log('resposta:', res.statusCode, res.body);
 
-const before = new Set((await store.listKeys('07-Ideias/')).map((k) => k.key));
+const before = new Set((await store.listKeys('03-Melhorias/')).map((k) => k.key));
 let found = null;
 for (let i = 0; i < 40 && !found; i++) {
   await new Promise((r) => setTimeout(r, 1000));
-  const keys = (await store.listKeys('07-Ideias/')).map((k) => k.key);
+  const keys = (await store.listKeys('03-Melhorias/')).map((k) => k.key);
   found = keys.find((k) => !before.has(k)) ?? null;
   if (!found && keys.length && i === 39) found = keys[keys.length - 1];
 }
 
 if (!found) {
-  console.error('FAIL: nenhuma nota em 07-Ideias/ após 40s');
+  console.error('FAIL: nenhuma nota em 03-Melhorias/ após 40s');
   process.exit(1);
 }
 

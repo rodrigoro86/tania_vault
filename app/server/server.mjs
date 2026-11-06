@@ -31,8 +31,6 @@ if (dbOn) {
     .then(({ migrate }) => migrate())
     .then(() => import('./reminders.mjs'))
     .then(({ startScheduler }) => startScheduler())
-    .then(() => import('./investimentos-rotinas.mjs'))
-    .then(({ startInvestimentos }) => startInvestimentos())
     .catch((err) => console.error('db/reminders:', err.message));
 }
 

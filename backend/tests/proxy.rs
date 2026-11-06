@@ -229,7 +229,7 @@ async fn proxy_preserva_metodo_path_query_corpo_e_status() {
     let response = call_proxy_with_headers(
         state(&format!("http://{upstream}"), None),
         Method::POST,
-        "/api/finance/resumo?x=1",
+        "/api/agent/status?x=1",
         Body::from(payload.to_string()),
         loopback(),
         None,
@@ -242,7 +242,7 @@ async fn proxy_preserva_metodo_path_query_corpo_e_status() {
     let echoed: serde_json::Value =
         serde_json::from_str(&read_body(response.into_body()).await).expect("json eco");
     assert_eq!(echoed["method"], "POST");
-    assert_eq!(echoed["uri"], "/api/finance/resumo?x=1");
+    assert_eq!(echoed["uri"], "/api/agent/status?x=1");
     assert_eq!(json(echoed["body"].as_str().expect("corpo texto")), payload);
     assert_eq!(counter.load(Ordering::Relaxed), 1);
 }
@@ -315,7 +315,7 @@ async fn proxy_preserva_multiplos_set_cookie() {
     let response = call_proxy(
         state(&format!("http://{upstream}"), None),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         loopback(),
         None,
@@ -386,7 +386,7 @@ async fn upstream_inexistente_devolve_502() {
     let response = call_proxy(
         state(&format!("http://{dead}"), None),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         loopback(),
         None,
@@ -407,7 +407,7 @@ async fn sem_banco_bloquea_cliente_remoto_com_texto_503() {
     let response = call_proxy(
         state(&format!("http://{upstream}"), None),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(),
         None,
@@ -434,7 +434,7 @@ async fn sem_banco_permite_loopback() {
     let response = call_proxy(
         state(&format!("http://{upstream}"), Some("s3gredo")),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         loopback(),
         None,
@@ -461,7 +461,7 @@ async fn headers_forgados_do_cliente_sao_removidos() {
     let response = call_proxy_with_headers(
         state(&format!("http://{upstream}"), None),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         loopback(),
         None,
@@ -488,7 +488,7 @@ async fn com_sessao_permite_cliente_remoto() {
     let response = call_proxy(
         state,
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(),
         Some(&format!("vault_session={token}")),
@@ -527,7 +527,7 @@ async fn sessao_remota_autenticada_injeta_segredo_e_usuario_no_node() {
     let response = call_proxy_with_headers(
         state,
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(),
         None,
@@ -562,7 +562,7 @@ async fn sem_segredo_nada_e_injetado_e_headers_forgados_caem() {
     let response = call_proxy_with_headers(
         state,
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(),
         Some(&format!("vault_session={token}")),
@@ -588,7 +588,7 @@ async fn sessao_invalida_de_cliente_remoto_e_401_sem_tocar_o_node() {
     let response = call_proxy(
         state,
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         remote(),
         Some("vault_session=token-que-nao-existe-no-banco"),

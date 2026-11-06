@@ -2,17 +2,17 @@
  * whatsapp.mjs — ponte WhatsApp (Evolution API) ↔ assistente/vault.
  *
  * Fluxo: Evolution chama POST /api/evolution/webhook → verifica o apikey →
- * whitelist de números → classifica (comprovante / ideia / feito / conversa
- * livre) → grava no MinIO (ou responde via agente) → devolve a confirmação
+ * whitelist de números → classifica (anexo / melhoria / feito / conversa
+ * livre) → grava no vault (ou responde via agente) → devolve a confirmação
  * via sendText.
  *
- * Comprovante (imagem/PDF): só é guardado, nunca vai para o LLM (traz CPF, SPEC
- * NFR-06). Os dados do recebimento vêm da legenda ou da conversa.
+ * Anexo (imagem/PDF, ex.: print de erro): só é guardado, nunca vai para o LLM
+ * (SPEC NFR-06). A legenda e o caminho do arquivo vão para o agente.
  *
  * Teste sem enviar WhatsApp: EVOLUTION_DRY_RUN=1 (o sendText só loga).
  */
 import crypto from 'node:crypto';
-import { store, readJson, writeVaultFile } from './vault-api.mjs';
+import { ATTACHMENTS_DIR, store, readJson, writeVaultFile } from './vault-api.mjs';
 import { getMedia, sendText } from './evolution.mjs';
 
 const DIGITS = (s) => String(s ?? '').replace(/\D/g, '');
@@ -65,25 +65,25 @@ export function extractMedia(msg) {
   return media ? { mimetype: String(media.mimetype ?? '').split(';')[0], caption: String(media.caption ?? '').trim() } : null;
 }
 
-const COMPROVANTE_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
-const MAX_COMPROVANTE = 20 * 1024 * 1024;
+const ANEXO_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+const MAX_ANEXO = 20 * 1024 * 1024;
+const ANEXOS_DIR = `${ATTACHMENTS_DIR}/whatsapp`;
 
 /** nome único por mensagem: reenvio da Evolution não duplica o arquivo */
-export function comprovantePath(dir, messageId, mimetype, hoje) {
+export function anexoPath(dir, messageId, mimetype, hoje) {
   const id = String(messageId ?? '').replace(/[^A-Za-z0-9]/g, '').slice(0, 32) || 'sem-id';
-  return `${dir}/${hoje.slice(0, 7)}/${hoje}-${id}.${COMPROVANTE_EXT[mimetype]}`;
+  return `${dir}/${hoje.slice(0, 7)}/${hoje}-${id}.${ANEXO_EXT[mimetype]}`;
 }
 
 /** o dia do usuário: em UTC, depois das 21h já seria o dia seguinte */
 export const hojeSP = (agora = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(agora);
 
-async function saveComprovante(data, mimetype) {
-  const { COMPROVANTES_DIR } = await import('./finance.mjs');
+async function saveAnexo(data, mimetype) {
   const base64 = data.message?.base64 || (await getMedia(data.key)).base64;
   const buffer = Buffer.from(base64, 'base64');
-  if (buffer.length > MAX_COMPROVANTE) throw new Error('arquivo acima de 20 MB');
+  if (buffer.length > MAX_ANEXO) throw new Error('arquivo acima de 20 MB');
   const hoje = hojeSP();
-  const path = comprovantePath(COMPROVANTES_DIR, data.key?.id, mimetype, hoje);
+  const path = anexoPath(ANEXOS_DIR, data.key?.id, mimetype, hoje);
   await writeVaultFile(path, buffer, { overwrite: true });
   return path;
 }
@@ -96,7 +96,7 @@ const conversas = new Map();
 function conversa(number) {
   const atual = conversas.get(number);
   if (atual && Date.now() - atual.at < CONVERSA_TTL) return atual;
-  const nova = { at: Date.now(), history: [], comprovantes: [] };
+  const nova = { at: Date.now(), history: [] };
   conversas.set(number, nova);
   return nova;
 }
@@ -109,7 +109,7 @@ export function lembrar(c, ...mensagens) {
 }
 
 /**
- * atalhos (ideia:, feito:) passam pelo agente, que escolhe o agente especializado (agenda, ideias...);
+ * atalhos (melhoria:/ideia:, feito:) passam pelo agente, que escolhe o agente especializado (agenda, melhorias...);
  * se o agente falhar (sem LLM, erro, timeout), grava direto como antes, para não perder a mensagem
  */
 export async function atalhoPeloAgente(pedir, direto) {
@@ -121,21 +121,15 @@ export async function atalhoPeloAgente(pedir, direto) {
   }
 }
 
-/** roda o agente com o histórico e os comprovantes ainda sem recebimento */
-async function askAgent(number, text) {
+/** roda o agente com o histórico; `anexo` = caminho do arquivo recém-guardado (o agente não vê o conteúdo) */
+async function askAgent(number, text, anexo = '') {
   const c = conversa(number);
-  const nota = c.comprovantes.length
-    ? `\n\n[Comprovantes guardados e ainda sem recebimento: ${c.comprovantes.join(', ')}. ` +
-      'Use o caminho em "comprovante" ao registrar o recebimento correspondente. Você não vê o conteúdo deles.]'
+  const nota = anexo
+    ? `\n\n[Arquivo anexado e guardado em ${anexo}. Você não vê o conteúdo; para citar numa nota use ![[${anexo.split('/').pop()}]].]`
     : '';
   const { runAgentText } = await import('./agent.ts');
   const reply = (await runAgentText(text + nota, { history: c.history })) || 'Feito.';
   lembrar(c, { role: 'user', content: text }, { role: 'assistant', content: reply });
-  if (c.comprovantes.length) {
-    const { comprovanteVinculado } = await import('./finance.mjs');
-    const usados = await Promise.all(c.comprovantes.map(comprovanteVinculado));
-    c.comprovantes = c.comprovantes.filter((_, i) => !usados[i]);
-  }
   return reply;
 }
 
@@ -144,29 +138,29 @@ function slugify(text) {
     norm(text)
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'ideia'
+      .slice(0, 60) || 'melhoria'
   );
 }
 
 function isIdea(text) {
   const t = String(text).trim();
-  if (/^(💡|ideia\s*:)/i.test(t)) return true;
+  if (/^(💡|ideia\s*:|melhoria\s*:)/i.test(t)) return true;
   const n = norm(t);
-  return /\b(escreva|crie|anote|salve|registre|monte|faca)\b/.test(n) && /\bideia\b/.test(n);
+  return /\b(escreva|crie|anote|salve|registre|monte|faca)\b/.test(n) && /\b(ideia|melhoria)\b/.test(n);
 }
 
 function isDone(text) {
   return /^(✅|feito\s*:)/i.test(String(text).trim());
 }
 
-/** gera a nota (LLM, com fallback para o texto do usuário) e grava em 05-Ideias/ */
+/** gera a nota (LLM, com fallback para o texto do usuário) e grava em 03-Melhorias/ */
 async function writeIdea(text) {
   let body = '';
   try {
     const { chatText } = await import('./agent.ts');
     body = await chatText(
-      'Você é a Tania, assistente pessoal. Escreva uma nota de ideia curta em português, em markdown. ' +
-        'Formato: primeira linha "# Título curto" e depois 3 a 6 bullets objetivos (problema, proposta, próximo passo). ' +
+      'Você é a Tania, assistente de análise e teste de sistemas. Escreva uma nota de melhoria curta em português, em markdown. ' +
+        'Formato: primeira linha "# Título curto" e depois 3 a 6 bullets objetivos (situação atual, proposta, impacto, próximo passo). ' +
         'Não use frontmatter. Responda só com a nota.',
       text,
     );
@@ -174,20 +168,20 @@ async function writeIdea(text) {
     console.error('whatsapp: LLM falhou, usando o texto do usuário:', err?.message);
   }
   body = String(body || '').trim();
-  const fallbackTitle = text.replace(/^(💡|ideia\s*:)/i, '').trim().slice(0, 80);
-  const title = (/^#\s+(.+)$/m.exec(body)?.[1] || fallbackTitle || 'Ideia').slice(0, 80);
+  const fallbackTitle = text.replace(/^(💡|ideia\s*:|melhoria\s*:)/i, '').trim().slice(0, 80);
+  const title = (/^#\s+(.+)$/m.exec(body)?.[1] || fallbackTitle || 'Melhoria').slice(0, 80);
   if (!/^#\s+/m.test(body)) body = `# ${title}\n\n${body || text}`;
   const today = new Date().toISOString().slice(0, 10);
-  const path = `05-Ideias/${today}-${slugify(title)}.md`;
-  const note = `---\ntype: idea\ncreated: ${today}\ntags: [ideia]\nstatus: open\n---\n\n${body}\n`;
+  const path = `03-Melhorias/${today}-${slugify(title)}.md`;
+  const note = `---\ntype: improvement\ncreated: ${today}\ntags: [melhoria]\nstatus: open\n---\n\n${body}\n`;
   await store.writeText(path, note);
   return path;
 }
 
-/** acrescenta "✅ feito" na nota do dia em 01-Diario/ */
+/** acrescenta "✅ feito" na nota do dia em 01-Agenda/ */
 async function writeDone(text) {
   const today = hojeSP();
-  const path = `01-Diario/${today}.md`;
+  const path = `01-Agenda/${today}.md`;
   let current = '';
   try {
     current = await store.readText(path);
@@ -220,34 +214,32 @@ async function processMessage(body) {
 
   const media = extractMedia(data.message);
   const text = media ? media.caption : extractText(data.message).trim();
-  if (!text && !(media && COMPROVANTE_EXT[media.mimetype])) {
-    await sendText(number, 'Recebi, mas só consigo processar texto, imagem ou PDF (ideia:, feito:, uma pergunta ou um comprovante).');
+  if (!text && !(media && ANEXO_EXT[media.mimetype])) {
+    await sendText(number, 'Recebi, mas só consigo processar texto, imagem ou PDF (melhoria:, feito:, uma pergunta ou um anexo).');
     return;
   }
 
   try {
     if (media) {
-      if (!COMPROVANTE_EXT[media.mimetype]) {
-        await sendText(number, '⚠️ Para comprovante, mande imagem ou PDF.');
+      if (!ANEXO_EXT[media.mimetype]) {
+        await sendText(number, '⚠️ Anexo só como imagem ou PDF.');
         return;
       }
-      const path = await saveComprovante(data, media.mimetype);
-      const c = conversa(number);
-      c.comprovantes.push(path);
+      const path = await saveAnexo(data, media.mimetype);
       if (!text) {
-        const pergunta = '📎 Comprovante guardado. De qual aluguel é, qual o valor e a data?';
-        lembrar(c, { role: 'assistant', content: pergunta });
-        await sendText(number, pergunta);
+        const aviso = `📎 Arquivo guardado em ${path}. Mande uma mensagem dizendo onde ele entra (teste, melhoria...).`;
+        lembrar(conversa(number), { role: 'assistant', content: aviso });
+        await sendText(number, aviso);
         return;
       }
-      await sendText(number, await askAgent(number, text));
+      await sendText(number, await askAgent(number, text, path));
       return;
     }
     if (isIdea(text) || isDone(text)) {
       const resposta = await atalhoPeloAgente(
         () => askAgent(number, text),
         async () => {
-          const direto = isIdea(text) ? `✅ Ideia salva em ${await writeIdea(text)}` : `✅ Registrado em ${await writeDone(text)}`;
+          const direto = isIdea(text) ? `✅ Melhoria salva em ${await writeIdea(text)}` : `✅ Registrado em ${await writeDone(text)}`;
           lembrar(conversa(number), { role: 'user', content: text }, { role: 'assistant', content: direto });
           return direto;
         },

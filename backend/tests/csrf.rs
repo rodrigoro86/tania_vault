@@ -121,7 +121,7 @@ async fn post_com_text_plain_devolve_415_sem_tocar_o_node() {
         state,
         loopback(),
         Method::POST,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::from("texto solto"),
         headers(Some("text/plain")),
     )
@@ -155,7 +155,7 @@ async fn post_sem_content_type_tambem_e_barrado() {
         state,
         loopback(),
         Method::POST,
-        "/api/finance/resumo",
+        "/api/agent/status",
         json_body(),
         headers(None),
     )
@@ -178,7 +178,7 @@ async fn post_com_application_json_chega_ao_upstream() {
             state.clone(),
             loopback(),
             Method::POST,
-            "/api/finance/resumo",
+            "/api/agent/status",
             json_body(),
             headers(Some(content_type)),
         )
@@ -242,7 +242,7 @@ async fn get_sem_content_type_chega_ao_upstream() {
         state,
         loopback(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         headers(None),
     )
@@ -268,7 +268,7 @@ async fn gate_e_rate_limit_ven_antes_do_csrf() {
         state.clone(),
         remote(),
         Method::POST,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::from("oi"),
         headers(Some("text/plain")),
     )
@@ -282,7 +282,7 @@ async fn gate_e_rate_limit_ven_antes_do_csrf() {
         state.clone(),
         loopback(),
         Method::GET,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::empty(),
         headers(None),
     )
@@ -294,7 +294,7 @@ async fn gate_e_rate_limit_ven_antes_do_csrf() {
         state,
         loopback(),
         Method::POST,
-        "/api/finance/resumo",
+        "/api/agent/status",
         Body::from("oi"),
         headers(Some("text/plain")),
     )

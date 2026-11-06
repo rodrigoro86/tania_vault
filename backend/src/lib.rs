@@ -3,7 +3,6 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod http;
-pub mod investimentos;
 pub mod reminders;
 pub mod settings;
 pub mod storage;

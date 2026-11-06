@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Campo } from './Finance';
+import { Campo } from './Form';
 import { configApi, type ConfigItem } from '../api';
 
 interface ConfigDados { pendente: boolean; cifra: boolean; itens: ConfigItem[] }

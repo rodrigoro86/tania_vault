@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-// bigint e numeric viram number no JS (ids e valores de aluguel)
+// bigint e numeric viram number no JS (ids e valores)
 pg.types.setTypeParser(20, (v) => (v === null ? null : Number(v)));
 pg.types.setTypeParser(1700, (v) => (v === null ? null : Number(v)));
 

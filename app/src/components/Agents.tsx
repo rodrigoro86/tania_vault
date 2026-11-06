@@ -10,7 +10,7 @@
  *   `btn`, `btn ghost`, `muted`, `flash`, `fin-erro`.
  */
 import { useEffect, useState } from 'react';
-import { Campo } from './Finance';
+import { Campo } from './Form';
 import { agentsApi, type AgentConfig, type Provedor } from '../api';
 
 interface AgentDados { origem: 'banco' | 'nenhum'; config: AgentConfig; chaves: string[] }

@@ -265,18 +265,6 @@ export async function handleVaultApi(req, res) {
       return await handleEvolutionWebhook(req, res);
     }
 
-    /* ---------- financeiro (Postgres) ---------- */
-    if (pathname.startsWith('/api/finance/')) {
-      const { handleFinance } = await import('./finance.mjs');
-      return await handleFinance(req, res, pathname, url);
-    }
-
-    /* ---------- lembretes (Postgres) ---------- */
-    if (pathname.startsWith('/api/investimentos/')) {
-      const { handleInvestimentos } = await import('./investimentos.mjs');
-      return handleInvestimentos(req, res, pathname, url);
-    }
-
     if (pathname === '/api/reminders' || pathname.startsWith('/api/reminders/')) {
       const { handleReminders } = await import('./reminders.mjs');
       return await handleReminders(req, res, pathname, url);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { atalhoPeloAgente, comprovantePath, extractMedia, hojeSP, lembrar, senderNumber } from '../whatsapp.mjs';
+import { atalhoPeloAgente, anexoPath, extractMedia, hojeSP, lembrar, senderNumber } from '../whatsapp.mjs';
 
 test('senderNumber usa o número real quando o remoteJid é @lid', () => {
   const key = { remoteJid: '123456789012345@lid', remoteJidAlt: '5511999999999@s.whatsapp.net' };
@@ -26,8 +26,8 @@ test('extractMedia acha imagem, documento com legenda e mensagem temporária', (
   assert.equal(extractMedia({ conversation: 'oi' }), null);
 });
 
-test('comprovantePath separa por mês e limpa o id da mensagem', () => {
-  assert.equal(comprovantePath('d', '../A1-b', 'application/pdf', '2026-10-31'), 'd/2026-10/2026-10-31-A1b.pdf');
+test('anexoPath separa por mês e limpa o id da mensagem', () => {
+  assert.equal(anexoPath('d', '../A1-b', 'application/pdf', '2026-10-31'), 'd/2026-10/2026-10-31-A1b.pdf');
 });
 
 test('hojeSP usa o dia de São Paulo, não o UTC', () => {

@@ -17,8 +17,6 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 # tools internas (ClickUp...): mesma imagem, outro comando (docker-compose.yml)
 COPY --from=build /app/tools ./tools
-# regra da situação do mês, a mesma da tela (tool situacao_mes)
-COPY --from=build /app/src/financeView.ts ./src/financeView.ts
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1 || exit 1

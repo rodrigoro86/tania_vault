@@ -15,9 +15,7 @@ const CASES = [
   { path: '/api/notes' },
   { path: '/api/agent/status' },
   { path: '/api/clickup/status' },
-  { path: '/api/finance/resumo' },
   { path: '/api/reminders' },
-  { path: '/api/investimentos/resumo' },
   { path: '/api/nao-existe' }, // rota inexistente: os dois devem 404 igual
 ];
 

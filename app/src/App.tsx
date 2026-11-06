@@ -5,8 +5,6 @@ import Sidebar from './components/Sidebar';
 import NoteView from './components/NoteView';
 import { FilePage } from './components/Media';
 import ToolFrame from './components/ToolFrame';
-import FinancePage from './components/Finance';
-import InvestmentsPage from './components/Investments';
 import UsersPage from './components/Users';
 import ResizeHandle from './components/ResizeHandle';
 import SettingsPage from './components/Settings';
@@ -88,8 +86,6 @@ function indexLabel(rawPath: string, filePath: string): string {
   if (rawPath.startsWith('tag/')) return `#${safeDecode(rawPath.slice(4))}`;
   if (rawPath.startsWith('tarefas')) return 'Tarefas';
   if (rawPath.startsWith('painel')) return 'Painel ClickUp';
-  if (rawPath.startsWith('financeiro')) return 'Financeiro';
-  if (rawPath.startsWith('investimentos')) return 'Investimentos';
   if (rawPath.startsWith('usuarios')) return 'Usuários';
   if (rawPath.startsWith('configuracoes')) return 'Configurações';
   if (rawPath.startsWith('agentes')) return 'Agents';
@@ -106,7 +102,7 @@ function Layout() {
   const rawPath = location.pathname.replace(/^\//, '');
   // /tag/x e /busca/x não são notas: sem esta guarda, findNote('tag/x')
   // resolve para uma nota chamada "x" e o breadcrumb mostra a nota errada
-  const isIndexRoute = /^(tag|busca|arquivo|tarefas|painel|financeiro|investimentos|usuarios|configuracoes|agentes)(\/|$)/.test(rawPath);
+  const isIndexRoute = /^(tag|busca|arquivo|tarefas|painel|t|tools-admin|usuarios|configuracoes|agentes)(\/|$)/.test(rawPath);
   const filePath = rawPath.startsWith('arquivo/') ? safeDecode(rawPath.slice('arquivo/'.length)) : '';
   const note = isIndexRoute ? null : findNote(rawPath);
 
@@ -323,8 +319,6 @@ function Layout() {
             <Route path="/t/:id/:pagina" element={<ToolFrame />} />
             <Route path="/tarefas" element={<Navigate to="/t/clickup/tarefas" replace />} />
             <Route path="/painel" element={<Navigate to="/t/clickup/painel" replace />} />
-            <Route path="/financeiro/*" element={<FinancePage />} />
-            <Route path="/investimentos/*" element={<InvestmentsPage />} />
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/tools-admin" element={<ToolsPage />} />
