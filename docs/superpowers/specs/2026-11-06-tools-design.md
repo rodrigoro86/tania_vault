@@ -29,8 +29,8 @@ estes dois últimos só nas requisições de um usuário (proxy).
 - `vinculos`: nota com o campo `campo` no frontmatter mostra, em Propriedades, a página `pagina` com `?valor=<valor>`.
 - `config`: chaves que o admin edita em ⚙ Configurações; a tool lê com `GET /api/core/config`.
 - `prompt`: texto acrescentado ao prompt do agente, explicando as funções.
-- Funções MCP com `annotations.readOnlyHint: true` rodam direto; as outras passam pelo mesmo fluxo de aprovação das
-  ferramentas de escrita do agente.
+- Funções MCP rodam direto, como as ferramentas de domínio de hoje (investimentos, financeiro): o `propose_plan` só vale
+  para escrita no vault, e a tool que grava no vault (subprojeto 2) passa pela API do núcleo.
 
 ## Núcleo (backend Rust)
 
@@ -92,7 +92,7 @@ Sem esse header, `/api/core/*` é 401.
   (`CLICKUP_TOKEN`, cache 60 s); o `clickup.config.json` segue opcional para `teamId`/`spaceIds`.
 - Manifesto: `{id:"clickup", nome:"ClickUp", icone:"✅", paginas:[tarefas, painel], vinculos:[{campo:"clickup", pagina:"card"}],
   config:[{chave:"CLICKUP_TOKEN", segredo:true}], prompt}` (o texto que hoje está em `agent.ts`).
-- MCP: `clickup_tasks` e `clickup_task`, os mesmos de `agent.ts` (somente leitura, `readOnlyHint`). O agente passa a
+- MCP: `clickup_tasks` e `clickup_task`, os mesmos de `agent.ts` (somente leitura). O agente passa a
   chamá-los `clickup__clickup_tasks` e `clickup__clickup_task`.
 - API: `GET /api/status|tasks|dashboard|task/{id}` (as de `/api/clickup/*` hoje).
 - UI: páginas `tarefas`, `painel` e `card` são entradas extras do Vite (`app/tools/clickup/ui/*.html`), reaproveitando os
