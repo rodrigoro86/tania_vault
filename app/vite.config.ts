@@ -56,5 +56,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // páginas da tool (iframe): cada html vira dist/tools/clickup/ui/<pagina>.html
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        'clickup-tarefas': path.resolve(__dirname, 'tools/clickup/ui/tarefas.html'),
+        'clickup-painel': path.resolve(__dirname, 'tools/clickup/ui/painel.html'),
+        'clickup-card': path.resolve(__dirname, 'tools/clickup/ui/card.html'),
+      },
+    },
   },
 });

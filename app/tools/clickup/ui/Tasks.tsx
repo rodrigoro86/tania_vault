@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { expireSession, vaultApi } from '../api';
-import { notes, reloadVault } from '../vault';
-import { downloadMarcaDocx, downloadText } from '../exportHtmlDoc';
-import { reportElement, reportMarkdown, reportTitle, type ReportInput } from '../taskReport';
-import { SLIDE_MODEL, buildTaskDeck } from '../taskSlides';
+import { expireSession, vaultApi } from '../../../src/api';
+import { notes, reloadVault } from '../../../src/vault';
+import { downloadMarcaDocx, downloadText } from '../../../src/exportHtmlDoc';
+import { reportElement, reportMarkdown, reportTitle, type ReportInput } from '../../../src/taskReport';
+import { SLIDE_MODEL, buildTaskDeck } from '../../../src/taskSlides';
 
 const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
 /** nome ASCII do arquivo do relatório/apresentação (AGENTS.md §3.3) */
 const fileBase = (r: ReportInput, kind: string) =>
   `${r.date}-${kind}-${r.scope.normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '')}`;
 // mesmos tipos que o servidor devolve: mudou lá, o build quebra aqui
-import type { Folder, Person, Task } from '../../tools/clickup/clickup-types.ts';
+import type { Folder, Person, Task } from '../clickup-types.ts';
 
 /**
- * Tasks.tsx — tarefas do ClickUp (SÓ LEITURA): minhas ou da equipe, filtradas
- * por espaço, projeto (pasta) e lista, agrupadas por pessoa, projeto, status ou prazo. Dados vêm de /api/clickup/* (o
- * token fica no servidor). Também exporta o card usado nas Propriedades.
+ * Tasks.tsx (tool clickup) — tarefas do ClickUp (SÓ LEITURA): minhas ou da equipe, filtradas
+ * por espaço, projeto (pasta) e lista, agrupadas por pessoa, projeto, status ou prazo. Dados vêm de
+ * /tools/clickup/api/* (o token fica no servidor). Também exporta o card da nota ligada (página card).
  */
 
 interface Status {
@@ -74,9 +73,9 @@ function TaskRow({ task }: { task: Task }) {
       <span className="cu-status" style={{ background: task.statusColor }} title={task.status} />
       <span className="cu-main">
         {note ? (
-          <Link to={`/${note.split('/').map(encodeURIComponent).join('/')}`} title="abrir a nota ligada">
+          <a href={`/#/${note.split('/').map(encodeURIComponent).join('/')}`} target="_top" title="abrir a nota ligada">
             {task.name}
-          </Link>
+          </a>
         ) : (
           <a href={task.url} target="_blank" rel="noopener" title="abrir no ClickUp">
             {task.name}
@@ -153,7 +152,7 @@ export function TasksPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    getJson<Status>('/api/clickup/status').then(setStatus, (e) => setStatus({ configured: false, error: (e as Error).message }));
+    getJson<Status>('/tools/clickup/api/status').then(setStatus, (e) => setStatus({ configured: false, error: (e as Error).message }));
   }, []);
 
   useEffect(() => {
@@ -187,7 +186,7 @@ export function TasksPage() {
     if (list) q.set('list', list);
     if (onlyLate) q.set('overdue', '1');
     if (closed) q.set('include_closed', '1');
-    getJson<{ tasks: Task[] }>(`/api/clickup/tasks?${q}`).then(
+    getJson<{ tasks: Task[] }>(`/tools/clickup/api/tasks?${q}`).then(
       (r) => setTasks(r.tasks),
       (e) => setError((e as Error).message),
     );
@@ -388,14 +387,14 @@ export function TasksPage() {
   );
 }
 
-/** card da tarefa ligada à nota (frontmatter clickup:), no painel de Propriedades */
+/** card da tarefa ligada à nota (frontmatter clickup:), na página card da tool */
 export function ClickUpCard({ id }: { id: string }) {
   const [task, setTask] = useState<(Task & { description: string }) | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
     setTask(null);
     setError('');
-    getJson<{ task: Task & { description: string } }>(`/api/clickup/task/${encodeURIComponent(id)}`).then(
+    getJson<{ task: Task & { description: string } }>(`/tools/clickup/api/task/${encodeURIComponent(id)}`).then(
       (r) => setTask(r.task),
       (e) => setError((e as Error).message),
     );

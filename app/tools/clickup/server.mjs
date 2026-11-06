@@ -9,7 +9,7 @@
  *   GET  /manifest.json   manifesto da tool (id, páginas, vínculos, config, prompt)
  *   POST /mcp             MCP (JSON-RPC 2.0): initialize, notifications/initialized, tools/list, tools/call
  *   GET  /api/status|tasks|dashboard|task/{id}   a API de antes, sem o prefixo /api/clickup
- *   GET  /ui/<pagina>     tarefas | painel | card  (HTML de dist/tools/clickup/)
+ *   GET  /ui/<pagina>     tarefas | painel | card  (HTML de dist/tools/clickup/ui/)
  */
 import http from 'node:http';
 import crypto from 'node:crypto';
@@ -41,8 +41,9 @@ const MANIFESTO = {
   prompt: PROMPT,
 };
 
-/** dist do front: app/dist/tools/clickup (troque com TANIA_TOOL_DIST em testes) */
-const distDir = () => process.env.TANIA_TOOL_DIST || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist', 'tools', 'clickup');
+/** dist do front: app/dist/tools/clickup/ui (troque com TANIA_TOOL_DIST em testes) */
+const distDir = () =>
+  process.env.TANIA_TOOL_DIST || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dist', 'tools', 'clickup', 'ui');
 
 function segredoOk(req) {
   const want = process.env.TANIA_TOOL_SECRET || '';

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { expireSession } from '../api';
+import { expireSession } from '../../../src/api';
 // mesmos tipos que o servidor devolve: mudou lá, o build quebra aqui
-import type { Dashboard, DashboardGroup, Folder, Person } from '../../tools/clickup/clickup-types.ts';
+import type { Dashboard, DashboardGroup, Folder, Person } from '../clickup-types.ts';
 
 /**
- * ClickUpDashboard.tsx — painel (dashboard) do ClickUp, SÓ LEITURA e SEPARADO
+ * Dashboard.tsx (tool clickup) — painel (dashboard) do ClickUp, SÓ LEITURA e SEPARADO
  * da página ☑ Tarefas: conta os cards ABERTOS (status não fechado), quantos
  * estão atrasados e abre o recorte por pessoa e por projeto (pasta).
- * Dados: /api/clickup/dashboard (o token continua só no servidor).
+ * Dados: /tools/clickup/api/dashboard (o token continua só no servidor).
  */
 
 interface Status {
@@ -73,10 +72,9 @@ export function ClickUpDashboardPage() {
   const [space, setSpace] = useState(() => saved('cu.dashSpace'));
   const [folder, setFolder] = useState(() => saved('cu.dashFolder'));
   const [reloadKey, setReloadKey] = useState(0);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    getJson<Status>('/api/clickup/status').then(setStatus, (e) => setStatus({ configured: false, error: (e as Error).message }));
+    getJson<Status>('/tools/clickup/api/status').then(setStatus, (e) => setStatus({ configured: false, error: (e as Error).message }));
   }, []);
 
   useEffect(() => {
@@ -99,7 +97,7 @@ export function ClickUpDashboardPage() {
     const q = new URLSearchParams({ scope });
     if (space) q.set('space', space);
     if (folder) q.set('folder', folder);
-    getJson<Dashboard>(`/api/clickup/dashboard?${q}`).then(setDash, (e) => setError((e as Error).message));
+    getJson<Dashboard>(`/tools/clickup/api/dashboard?${q}`).then(setDash, (e) => setError((e as Error).message));
   }, [status, scope, space, folder, reloadKey]);
 
   const folders = useMemo(() => (status?.folders ?? []).filter((f) => !space || f.spaceId === space), [status, space]);
@@ -111,7 +109,7 @@ export function ClickUpDashboardPage() {
     localStorage.setItem('cu.space', f ? f.spaceId : space);
     localStorage.setItem('cu.folder', f?.id ?? '');
     localStorage.setItem('cu.list', '');
-    navigate('/tarefas');
+    window.top!.location.hash = '#/t/clickup/tarefas';
   }
 
 
@@ -199,7 +197,7 @@ export function ClickUpDashboardPage() {
             pode passar do total de cards.
             {dash.truncated && <span className="cu-late"> · lista truncada pelo limite de páginas do ClickUp</span>}
             {' '}
-            <Link to="/tarefas">lista completa ☑</Link>
+            <a href="/#/t/clickup/tarefas" target="_top">lista completa ☑</a>
           </p>
         </>
       )}

@@ -1267,3 +1267,7 @@ a { color: var(--link); }
   height: 220px;
   border: 0;
 }
+
+/* página de tool dentro do iframe */
+body.tool-embed { background: transparent; }
+body.tool-embed #root { padding: 12px; }

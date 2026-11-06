@@ -11,7 +11,11 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // tools/*.mjs (errors.mjs, server.mjs) são importados pelo código TS da tool:
+    // aceita JS sem checar o JS em si, só para ter os tipos dos exports
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src"]
+  "include": ["src", "tools"]
 }
