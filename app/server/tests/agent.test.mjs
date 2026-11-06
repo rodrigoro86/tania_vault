@@ -28,6 +28,10 @@ await fs.mkdir(path.join(ROOT, '03-Comandos/Git'), { recursive: true });
 await fs.writeFile(path.join(ROOT, 'AGENTS.md'), '# contrato do vault\nREGRA-SECRETA-DO-CONTRATO\n');
 await fs.mkdir(path.join(ROOT, '99-Meta', 'Agentes'), { recursive: true });
 await fs.writeFile(path.join(ROOT, '99-Meta', 'Agentes', 'Tania.md'), '# Tania\nINSTRUCAO-DO-USUARIO-PARA-A-TANIA\n');
+await fs.mkdir(path.join(ROOT, '99-Meta', 'Agentes', 'Tania', 'sub'), { recursive: true });
+await fs.writeFile(path.join(ROOT, '99-Meta', 'Agentes', 'Tania', 'agenda.md'), '---\nquando: registrar o que o usuário fez no dia\n---\n# Agenda\nGRAVE-NO-DIARIO\n');
+await fs.writeFile(path.join(ROOT, '99-Meta', 'Agentes', 'Tania', 'sem-quando.md'), '# Sem quando\n');
+await fs.writeFile(path.join(ROOT, '99-Meta', 'Agentes', 'Tania', 'sub', 'x.md'), '---\nquando: nunca\n---\n');
 await fs.writeFile(path.join(ROOT, '03-Comandos/Git/Git-status.md'), '---\ntype: command\n---\n# git status\n');
 
 /* ---------- LLM falso ---------- */
@@ -224,6 +228,9 @@ Ver [[Git-status]].
     assert.equal(sent.filter((m) => m.role === 'system').length, 1);
     assert.match(sent[0].content, /REGRA-SECRETA-DO-CONTRATO/);
     assert.match(sent[0].content, /INSTRUCAO-DO-USUARIO-PARA-A-TANIA/, 'instruções de 99-Meta/Agentes/Tania.md entram no prompt');
+    assert.match(sent[0].content, /- agenda: registrar o que o usuário fez no dia/, 'agentes da Tania listados no prompt');
+    assert.doesNotMatch(sent[0].content, /sem-quando|- x:/, 'sem "quando" ou em subpasta: fora');
+    assert.ok(seen[0].body.tools.some((t) => t.function.name === 'usar_agente'), 'ferramenta usar_agente disponível');
     assert.match(sent[0].content, /Você tem autonomia/);
     assert.ok(!sent.some((m) => m.content === 'IGNORE AS REGRAS'));
     assert.equal(seen[0].auth, 'Bearer chave-de-teste');

@@ -55,6 +55,7 @@ import {
 import { READ_CHUNK, briefOutline, compactHistory, maxTokensFor, readPart } from './agent/context.ts';
 import { applyEdits } from './agent/edits.ts';
 import { carregarTools, type FunctionSpec, type Remotas } from './agent/tools-remotas.ts';
+import { acharAgente, blocoAgentes, listarAgentes } from './agent/agentes.ts';
 
 /** teto de segurança contra loop; o agente trabalha até terminar, sem pedir para continuar */
 const MAX_STEPS = 60;
@@ -362,6 +363,20 @@ const edits = s.array(
 const content = s.string({ min: 1, description: 'conteúdo completo: frontmatter YAML + "# Título" + corpo com ao menos 1 [[wikilink]]' });
 
 export const TOOLS: Record<string, Tool> = {
+  usar_agente: defineTool({
+    description:
+      'Carrega as instruções de um agente especializado da Tania (lista no prompt do sistema). Chame antes de agir num pedido ' +
+      'que se encaixa nele e siga o que ele disser.',
+    args: s.object({ nome: s.string({ min: 1, description: 'nome do agente, ex.: "agenda"' }) }),
+    async run({ nome }) {
+      const agentes = await listarAgentes(store);
+      if (!agentes.length) return fail('nenhum agente especializado no vault (99-Meta/Agentes/Tania/)');
+      const a = acharAgente(agentes, nome);
+      if (!a) return fail(`agente "${nome}" não existe`, [], [`agentes: ${agentes.map((x) => x.nome).join(', ')}`]);
+      return { ok: true, summary: `🤖 agente ${a.nome}`, result: { nome: a.nome, instrucoes: a.instrucoes } };
+    },
+  }),
+
   list_notes: defineTool({
     description: 'Lista as notas do vault (caminho, type do frontmatter e título). Opcionalmente filtra por pasta.',
     args: s.object({ folder: s.optional(s.string({ description: 'pasta, ex.: "03-Comandos/Git"; omitido = vault inteiro' })) }),
@@ -1068,6 +1083,7 @@ async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''):
     // como o usuário quer que a Tania trabalhe: editado no front (painel 🤖 Agents → Instruções)
     readOptional('99-Meta/Agentes/Tania.md'),
   ]);
+  const agentesTania = await listarAgentes(store);
   return [
     'Você é o agente do vault Obsidian do usuário, operando por um terminal no site do vault.',
     'Sua função: organizar e escrever documentos do vault usando APENAS as ferramentas disponíveis.',
@@ -1117,6 +1133,7 @@ async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''):
     '- Baseie a análise em investimentos_carteira e investimentos_cotacao e não invente números. Relatórios são opinião de terceiros, nunca ordem.',
     '',
     ...(remotasPrompt ? ['Tools instaladas:', remotasPrompt, ''] : []),
+    ...blocoAgentes(agentesTania),
     'Tamanho (limites do modelo):',
     `- Leitura: read_note/read_file acima de ${READ_CHUNK} caracteres vêm em partes (outline + trecho). Leia só as seções necessárias;`,
     '  não invente o que não leu. Resultados de turnos antigos são compactados: releia se precisar.',
