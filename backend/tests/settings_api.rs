@@ -192,7 +192,7 @@ async fn nao_admin_recebe_403() {
     let response = call(
         fixture.state.clone(),
         Method::PUT,
-        "/api/config/CLICKUP_TOKEN",
+        "/api/config/GROQ_API_KEY",
         Body::from(json!({ "valor": "qualquer-coisa" }).to_string()),
         client,
         json_bearer(&token),
@@ -211,7 +211,7 @@ async fn fluxo_completo_admin() {
     let client = remote(2);
 
     // linhas globais: começa e termina limpo
-    limpar(&fixture.pool, &["CLICKUP_TOKEN", "RATE_LIMIT_MAX"]).await;
+    limpar(&fixture.pool, &["GROQ_API_KEY", "RATE_LIMIT_MAX"]).await;
 
     let (token, _admin) = new_user(&fixture, "12345678", true).await;
 
@@ -267,7 +267,7 @@ async fn fluxo_completo_admin() {
     let response = call(
         fixture.state.clone(),
         Method::PUT,
-        "/api/config/CLICKUP_TOKEN",
+        "/api/config/GROQ_API_KEY",
         Body::from(json!({ "valor": "token-secreto-9876" }).to_string()),
         client,
         json_bearer(&token),
@@ -303,8 +303,8 @@ async fn fluxo_completo_admin() {
         .as_array()
         .expect("itens")
         .iter()
-        .find(|item| item["chave"].as_str() == Some("CLICKUP_TOKEN"))
-        .expect("CLICKUP_TOKEN na lista");
+        .find(|item| item["chave"].as_str() == Some("GROQ_API_KEY"))
+        .expect("GROQ_API_KEY na lista");
     assert_eq!(brapi["origem"].as_str().expect("origem"), "banco");
     assert_eq!(brapi["valor"].as_str().expect("valor"), "••••9876");
 
@@ -315,8 +315,8 @@ async fn fluxo_completo_admin() {
     );
 
     // no banco: cifrado `v1:` e sem o texto original
-    let bruto = valor_bruto(&fixture.pool, "CLICKUP_TOKEN").await;
-    let bruto = bruto.expect("a linha de CLICKUP_TOKEN deveria existir");
+    let bruto = valor_bruto(&fixture.pool, "GROQ_API_KEY").await;
+    let bruto = bruto.expect("a linha de GROQ_API_KEY deveria existir");
     assert!(
         bruto.starts_with("v1:"),
         "valor bruto {bruto} não é cifrado"
@@ -342,7 +342,7 @@ async fn fluxo_completo_admin() {
     assert_eq!(body["item"]["origem"].as_str().expect("origem"), "banco");
 
     // apagar: 200 e a origem deixa de ser o banco (volta a valer o env)
-    for chave in ["CLICKUP_TOKEN", "RATE_LIMIT_MAX"] {
+    for chave in ["GROQ_API_KEY", "RATE_LIMIT_MAX"] {
         let response = call(
             fixture.state.clone(),
             Method::DELETE,
@@ -377,8 +377,8 @@ async fn fluxo_completo_admin() {
         .as_array()
         .expect("itens")
         .iter()
-        .find(|item| item["chave"].as_str() == Some("CLICKUP_TOKEN"))
-        .expect("CLICKUP_TOKEN na lista");
+        .find(|item| item["chave"].as_str() == Some("GROQ_API_KEY"))
+        .expect("GROQ_API_KEY na lista");
     assert_ne!(brapi["origem"].as_str().expect("origem"), "banco");
 
     // chave desconhecida também no DELETE

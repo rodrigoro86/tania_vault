@@ -1,18 +1,88 @@
 version: "3.7"
 
 # Stack de produção (Docker Swarm + Traefik).
-# Build: o workflow faz `docker build -t tania-app:latest app` antes do deploy.
+# Traefik -> backend (Rust, 3100) -> legacy (Node, 3101: front + rotas ainda não portadas) e tools (spec 2026-11-06-tools).
+# Build: `docker build -t tania-app:latest app` e `docker build -t tania-backend:latest backend` antes do deploy.
+# O .env precisa de: DATABASE_URL, LEGACY_PROXY_SECRET, TANIA_CONFIG_KEY, TANIA_TOOL_SECRET_CLICKUP e, na 1ª subida
+# (tabela usuarios vazia), TANIA_BOOTSTRAP_ADMIN=usuario:senha. O login passa a ser por usuário (VAULT_AUTH não vale mais).
 # Deploy: APP_DOMAIN=seu.dominio docker stack deploy --resolve-image never -c build.yml tania
 # (APP_DOMAIN é obrigatório: é o Host() das rotas do Traefik; o workflow lê de vars.APP_DOMAIN)
 services:
+  backend:
+    image: tania-backend:${TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      - PORT=3100
+      - TZ=America/Sao_Paulo
+      - LEGACY_UPSTREAM=http://app:3101
+      - TANIA_TOOLS=clickup=http://tool-clickup:4100
+    networks:
+      - portainerNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+        delay: 10s
+      update_config:
+        parallelism: 1
+        order: start-first
+        monitor: 90s
+        failure_action: rollback
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=portainerNet
+        - traefik.http.routers.assistente.rule=Host(`${APP_DOMAIN}`)
+        - traefik.http.routers.assistente.entrypoints=websecure
+        - traefik.http.routers.assistente.tls=true
+        - traefik.http.routers.assistente.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.assistente.service=assistente
+        - traefik.http.services.assistente.loadbalancer.server.port=3100
+        - traefik.http.services.assistente.loadbalancer.passHostHeader=true
+        # HTTP -> HTTPS
+        - traefik.http.routers.assistente_http.rule=Host(`${APP_DOMAIN}`)
+        - traefik.http.routers.assistente_http.entrypoints=web
+        - traefik.http.routers.assistente_http.middlewares=assistente_https
+        - traefik.http.middlewares.assistente_https.redirectscheme.scheme=https
+
+  # tool ClickUp: mesma imagem do Node, outro comando; só o backend fala com ela
+  tool-clickup:
+    image: tania-app:${TAG:-latest}
+    environment:
+      - PORT=4100
+      - TZ=America/Sao_Paulo
+      - TANIA_CORE_URL=http://backend:3100
+    # a tool lê TANIA_TOOL_SECRET; no .env ele se chama TANIA_TOOL_SECRET_CLICKUP
+    env_file:
+      - .env
+    entrypoint: ["sh", "-c", "TANIA_TOOL_SECRET=$$TANIA_TOOL_SECRET_CLICKUP exec node tools/clickup/server.mjs"]
+    networks:
+      - portainerNet
+    deploy:
+      replicas: 1
+      # a imagem só existe no manager (build local + --resolve-image never)
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+        delay: 10s
+
   app:
     image: tania-app:${TAG:-latest}
     # lido a partir da pasta do projeto no servidor (app/.env, fora do git)
     env_file:
       - .env
     environment:
-      - PORT=3100
+      - PORT=3101
       - TZ=America/Sao_Paulo
+      # o Node só aceita o que o backend já autenticou (LEGACY_PROXY_SECRET do .env)
+      - VAULT_AUTH=
+      - TANIA_TOOLS=clickup=http://tool-clickup:4100
     networks:
       - portainerNet
     # agent.config.json fica no servidor (fora do git); o ClickUp é opcional
@@ -40,21 +110,6 @@ services:
       rollback_config:
         parallelism: 1
         order: start-first
-      labels:
-        - traefik.enable=true
-        - traefik.docker.network=portainerNet
-        - traefik.http.routers.assistente.rule=Host(`${APP_DOMAIN}`)
-        - traefik.http.routers.assistente.entrypoints=websecure
-        - traefik.http.routers.assistente.tls=true
-        - traefik.http.routers.assistente.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.assistente.service=assistente
-        - traefik.http.services.assistente.loadbalancer.server.port=3100
-        - traefik.http.services.assistente.loadbalancer.passHostHeader=true
-        # HTTP -> HTTPS
-        - traefik.http.routers.assistente_http.rule=Host(`${APP_DOMAIN}`)
-        - traefik.http.routers.assistente_http.entrypoints=web
-        - traefik.http.routers.assistente_http.middlewares=assistente_https
-        - traefik.http.middlewares.assistente_https.redirectscheme.scheme=https
 
 networks:
   portainerNet:

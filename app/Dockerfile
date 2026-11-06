@@ -15,6 +15,8 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
+# tools internas (ClickUp...): mesma imagem, outro comando (docker-compose.yml)
+COPY --from=build /app/tools ./tools
 # regra da situação do mês, a mesma da tela (tool situacao_mes)
 COPY --from=build /app/src/financeView.ts ./src/financeView.ts
 EXPOSE 3000

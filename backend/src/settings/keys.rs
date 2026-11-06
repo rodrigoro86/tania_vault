@@ -102,13 +102,6 @@ pub const CHAVES: &[Chave] = &[
         regra: Regra::Livre,
     },
     Chave {
-        nome: "CLICKUP_TOKEN",
-        grupo: "ClickUp",
-        descricao: "Token pessoal do ClickUp (pk_…); vence o do clickup.config.json",
-        segredo: true,
-        regra: Regra::Livre,
-    },
-    Chave {
         nome: "RATE_LIMIT_MAX",
         grupo: "Servidor",
         descricao: "Requisições por IP por janela na /api",
@@ -180,11 +173,10 @@ mod tests {
 
     #[test]
     fn chave_encontra_e_nao_inventa() {
-        assert_eq!(
-            chave("CLICKUP_TOKEN").map(|c| c.nome),
-            Some("CLICKUP_TOKEN")
-        );
-        assert!(chave("CLICKUP_TOKEN").is_some_and(|c| c.segredo));
+        assert_eq!(chave("GROQ_API_KEY").map(|c| c.nome), Some("GROQ_API_KEY"));
+        assert!(chave("GROQ_API_KEY").is_some_and(|c| c.segredo));
+        // o token do ClickUp é config da tool (tools_config), não chave global
+        assert!(chave("CLICKUP_TOKEN").is_none());
         assert!(chave("BRAPI_TOKEN").is_none());
         assert!(chave("VAULT_STORAGE").is_none());
         assert!(chave("").is_none());
