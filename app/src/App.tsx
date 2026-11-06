@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { notes, byPath, tree, allTags, resolveTarget, reloadVault, subscribeVault, vaultWritable, type Note } from './vault';
 import Sidebar from './components/Sidebar';
 import NoteView from './components/NoteView';
 import { FilePage } from './components/Media';
-import { TasksPage } from './components/Tasks';
-import { ClickUpDashboardPage } from './components/ClickUpDashboard';
+import ToolFrame from './components/ToolFrame';
 import FinancePage from './components/Finance';
 import InvestmentsPage from './components/Investments';
 import UsersPage from './components/Users';
@@ -320,8 +319,9 @@ function Layout() {
             <Route path="/tag/:tag" element={<TagPage />} />
             <Route path="/busca/:q" element={<SearchPage />} />
             <Route path="/arquivo/*" element={<FilePage key={filePath} path={filePath} />} />
-            <Route path="/tarefas" element={<TasksPage />} />
-            <Route path="/painel" element={<ClickUpDashboardPage />} />
+            <Route path="/t/:id/:pagina" element={<ToolFrame />} />
+            <Route path="/tarefas" element={<Navigate to="/t/clickup/tarefas" replace />} />
+            <Route path="/painel" element={<Navigate to="/t/clickup/painel" replace />} />
             <Route path="/financeiro/*" element={<FinancePage />} />
             <Route path="/investimentos/*" element={<InvestmentsPage />} />
             <Route path="/usuarios" element={<UsersPage />} />

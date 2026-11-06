@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import type { TreeNode, VaultFile, FileKind } from '../vault';
 import { vaultApi } from '../api';
 import UserMenu from './UserMenu';
-import Ribbon, { type LeftView } from './Ribbon';
+import Ribbon, { BASE_VIEWS, type LeftView } from './Ribbon';
+import { useTools } from '../tools';
 
 function encode(path: string): string {
   return path.split('/').map((p) => encodeURIComponent(p)).join('/');
@@ -468,11 +469,24 @@ export default function Sidebar({
   // estável: o ContextMenu reinstala os listeners quando onClose muda
   const closeMenu = useMemo(() => () => setMenu(null), []);
 
-  // vista do painel ao lado da faixa de ícones: salva no navegador (ui.leftView)
+  // tools ativas → vistas da faixa; o painel de uma tool linka para /t/<id>/<pagina>
+  const tools = useTools();
+  const views: { id: string; icon: string; label: string }[] = [
+    BASE_VIEWS[0],
+    ...tools
+      .filter((t) => t.ativo)
+      .map((t) => ({ id: `tool:${t.id}`, icon: t.manifest!.icone, label: t.manifest!.nome })),
+    BASE_VIEWS[1],
+  ];
+
+  // vista do painel ao lado da faixa de ícones: salva no navegador (ui.leftView).
+  // Qualquer string é aceita: vista inexistente mostra o painel vazio. 'clickup'
+  // (valor antigo) vira a tool do ClickUp.
   const [view, setView] = useState<LeftView>(() => {
     try {
       const v = localStorage.getItem('ui.leftView');
-      return v === 'clickup' || v === 'agents' ? v : 'vault';
+      if (!v) return 'vault';
+      return v === 'clickup' ? 'tool:clickup' : v;
     } catch {
       return 'vault';
     }
@@ -603,12 +617,15 @@ export default function Sidebar({
     }
   }
 
-  const VIEW_TITLE: Record<LeftView, string> = { vault: 'Explorador', clickup: 'ClickUp', agents: 'Agents' };
+  // título do painel: vault/agents fixos, tool = nome do manifesto
+  const toolId = view.startsWith('tool:') ? view.slice('tool:'.length) : '';
+  const tool = toolId ? tools.find((t) => t.id === toolId) ?? null : null;
+  const title = view === 'vault' ? 'Explorador' : view === 'agents' ? 'Agents' : tool?.manifest?.nome ?? view;
 
   return (
     <nav className={`sidebar${open ? '' : ' is-collapsed'}`} aria-label="Explorador do vault" tabIndex={-1}>
       {/* faixa de ícones (Ribbon.tsx): visível sempre, até com o painel recolhido */}
-      <Ribbon view={view} open={open} onSelect={select} />
+      <Ribbon view={view} open={open} onSelect={select} views={views} />
 
       {/* portal no body: funciona em qualquer vista e mesmo com o painel fechado */}
       {menu && <ContextMenu menu={menu} actions={actions} onClose={closeMenu} />}
@@ -616,7 +633,7 @@ export default function Sidebar({
       {open && (
         <div className="sidebar-pane">
           <div className="sidebar-head">
-            <span className="sidebar-title">{VIEW_TITLE[view]}</span>
+            <span className="sidebar-title">{title}</span>
             <span className="sidebar-head-actions">
               {view === 'vault' && writable && (
                 <button
@@ -704,14 +721,17 @@ export default function Sidebar({
             </div>
           )}
 
-          {view === 'clickup' && (
+          {tool?.manifest && (
             <div className="sidebar-body">
-              <Link className={`sidebar-shortcut${currentPath === '' && location.hash.startsWith('#/painel') ? ' file-active' : ''}`} to="/painel">
-                📊 Painel <span className="muted">ClickUp</span>
-              </Link>
-              <Link className={`sidebar-shortcut${currentPath === '' && location.hash.startsWith('#/tarefas') ? ' file-active' : ''}`} to="/tarefas">
-                ☑ Tarefas <span className="muted">ClickUp</span>
-              </Link>
+              {tool.manifest.paginas.map((p) => {
+                const to = `/t/${tool.id}/${p.id}`;
+                const ativo = location.hash === `#${to}`;
+                return (
+                  <Link key={p.id} className={`sidebar-shortcut${ativo ? ' file-active' : ''}`} to={to}>
+                    {p.titulo}
+                  </Link>
+                );
+              })}
               {/* Financeiro e Investimentos escondidos do menu; as telas seguem em #/financeiro e #/investimentos */}
             </div>
           )}
