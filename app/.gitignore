@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-smoke/
+.htpasswd
+
+# segredos: nunca versionar (o .env.example é o template público)
+.env
+agent.config.json
+clickup.config.json

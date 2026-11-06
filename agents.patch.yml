@@ -1,0 +1,95 @@
+# agents.patch.yml — registro dos agentes do projeto Tania_Assistente no harness.
+#
+# TEMPLATE: não é aplicado automaticamente. Para ativar, copie/merge o bloco
+# `insert` abaixo no seu profile (`$DSH_PROFILE_DIR/cordis.patch.yml`), junto dos
+# providers já definidos em agents-per-model.patch.yml (strata / my-gateway).
+#
+# Cada agente corresponde a um papel do AGENTS.md. O papel em si (dono, escopo,
+# contratos) é passado no prompt da delegação; aqui só se fixa a rota de modelo.
+#
+# Roteamento:
+#   - "fast"   (strata/qwen)   -> tarefas mecânicas: agent_frontend, agent_storage
+#   - "balanc" (my-gateway/model-a) -> agent_spec, agent_data, agent_evolution
+#   - "deep"   (my-gateway/model-b, reasoning high) -> agent_backend, agent_reviewer
+
+- insert:
+    # ---- docs: dono de SPEC/PLANO/AGENTS (contratos e sincronização) ----
+    - id: agent-spec
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_spec
+        maxDepth: 1
+        agentOptions:
+          provider: my-gateway
+          model: model-a
+
+    # ---- storage: VaultStore (LocalFsStore + S3Store/MinIO) ----
+    - id: agent-storage
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_storage
+        maxDepth: 1
+        agentOptions:
+          provider: strata
+          model: qwen3.8-flash-next-q2_0
+          maxTokens: 4096
+
+    # ---- backend: API + agent.ts + tools (consome VaultStore) ----
+    - id: agent-backend
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_backend
+        maxDepth: 1
+        agentOptions:
+          provider: my-gateway
+          model: model-b
+          reasoningEffort: high
+
+    # ---- data: Postgres + financeiro + lembretes ----
+    - id: agent-data
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_data
+        maxDepth: 1
+        agentOptions:
+          provider: my-gateway
+          model: model-a
+
+    # ---- evolution: webhook WhatsApp + scheduler ----
+    - id: agent-evolution
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_evolution
+        maxDepth: 1
+        agentOptions:
+          provider: my-gateway
+          model: model-a
+
+    # ---- frontend: UI Obsidian web + telas ----
+    - id: agent-frontend
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_frontend
+        maxDepth: 1
+        agentOptions:
+          provider: strata
+          model: qwen3.8-flash-next-q2_0
+          maxTokens: 4096
+
+    # ---- reviewer: sync gate (testes + conferência de contratos) ----
+    - id: agent-reviewer
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: agent_reviewer
+        maxDepth: 1
+        agentOptions:
+          provider: my-gateway
+          model: model-b
+          reasoningEffort: high

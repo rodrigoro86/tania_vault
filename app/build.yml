@@ -1,0 +1,62 @@
+version: "3.7"
+
+# Stack de produção (Docker Swarm + Traefik).
+# Build: o workflow faz `docker build -t tania-app:latest app` antes do deploy.
+# Deploy: APP_DOMAIN=seu.dominio docker stack deploy --resolve-image never -c build.yml tania
+# (APP_DOMAIN é obrigatório: é o Host() das rotas do Traefik; o workflow lê de vars.APP_DOMAIN)
+services:
+  app:
+    image: tania-app:${TAG:-latest}
+    # lido a partir da pasta do projeto no servidor (app/.env, fora do git)
+    env_file:
+      - .env
+    environment:
+      - PORT=3100
+      - TZ=America/Sao_Paulo
+    networks:
+      - portainerNet
+    # agent.config.json fica no servidor (fora do git); o ClickUp é opcional
+    volumes:
+      - ./agent.config.json:/app/agent.config.json:ro
+    # Healthcheck desativado temporariamente: enquanto o teste não passava, o
+    # Swarm ficava recriando a task ("starting" em loop). Reative quando o
+    # serviço estabilizar (test: CMD-SHELL wget .../api/health).
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: any
+        delay: 10s
+      update_config:
+        parallelism: 1
+        order: start-first
+        monitor: 90s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        order: start-first
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=portainerNet
+        - traefik.http.routers.assistente.rule=Host(`${APP_DOMAIN}`)
+        - traefik.http.routers.assistente.entrypoints=websecure
+        - traefik.http.routers.assistente.tls=true
+        - traefik.http.routers.assistente.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.assistente.service=assistente
+        - traefik.http.services.assistente.loadbalancer.server.port=3100
+        - traefik.http.services.assistente.loadbalancer.passHostHeader=true
+        # HTTP -> HTTPS
+        - traefik.http.routers.assistente_http.rule=Host(`${APP_DOMAIN}`)
+        - traefik.http.routers.assistente_http.entrypoints=web
+        - traefik.http.routers.assistente_http.middlewares=assistente_https
+        - traefik.http.middlewares.assistente_https.redirectscheme.scheme=https
+
+networks:
+  portainerNet:
+    external: true
+    name: portainerNet

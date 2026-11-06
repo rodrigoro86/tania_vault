@@ -1,0 +1,151 @@
+# Stack completa local: front (nginx) -> backend (Rust) -> legado (Node), Postgres e bucket RustFS.
+#
+#   docker compose up -d --build      # não precisa de nenhum .env
+#   abra http://localhost:3000        # login local: admin / admin (criado na 1ª subida)
+#
+# Banco e bucket são configurados UMA vez, no bloco x-stack abaixo: o mesmo valor vai para o serviço
+# (postgres, rustfs, rustfs-init) e para o app (backend, legacy). Para trocar um default, defina a variável
+# no shell ou num .env na RAIZ: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, RUSTFS_ACCESS_KEY,
+# RUSTFS_SECRET_KEY, RUSTFS_BUCKET, RUSTFS_PORT, FRONT_PORT, TANIA_BOOTSTRAP_ADMIN, LEGACY_PROXY_SECRET,
+# TANIA_CONFIG_KEY. (Postgres só lê usuário/senha/banco ao criar o volume: depois disso, troque com `down -v`.)
+# O app/.env, se existir, entra só com as integrações (WhatsApp, chaves de LLM, BRAPI_TOKEN...):
+# VAULT_AUTH, DATABASE_URL e RUSTFS_* dele são ignorados aqui, então a stack local nunca toca a produção.
+# Produção continua em app/build.yml (Swarm + Traefik).
+
+# ---- valores do banco e do bucket: definidos só aqui (âncoras YAML, reusadas com *nome) ----
+x-stack:
+  pg-user: &pg-user ${POSTGRES_USER:-tania}
+  pg-password: &pg-password ${POSTGRES_PASSWORD:-tania-local}
+  pg-db: &pg-db ${POSTGRES_DB:-tania}
+  s3-access-key: &s3-access-key ${RUSTFS_ACCESS_KEY:-tania-local}
+  s3-secret-key: &s3-secret-key ${RUSTFS_SECRET_KEY:-tania-local-secret}
+  s3-bucket: &s3-bucket ${RUSTFS_BUCKET:-tania-vault}
+  s3-region: &s3-region us-east-1
+
+x-app-env: &app-env
+  TZ: America/Sao_Paulo
+  # banco pelas variáveis padrão do Postgres (Node e Rust montam a conexão com elas);
+  # DATABASE_URL vazio para um app/.env nunca apontar a stack local para outro banco
+  DATABASE_URL: ""
+  PGHOST: postgres
+  PGPORT: "5432"
+  PGUSER: *pg-user
+  PGPASSWORD: *pg-password
+  PGDATABASE: *pg-db
+  # segredo do header Rust -> Node: o Node só aceita o que o backend já autenticou
+  LEGACY_PROXY_SECRET: ${LEGACY_PROXY_SECRET:-tania-local-proxy}
+  # cifra os segredos salvos em ⚙ Configurações (chave só de dev; em produção gere outra: head -c 32 /dev/urandom | base64)
+  TANIA_CONFIG_KEY: ${TANIA_CONFIG_KEY:-4RnmoK24do3o7c8FkI3IKHjBUOH8fOnHyNVD1NeV6TY=}
+  VAULT_STORAGE: rustfs
+  RUSTFS_ENDPOINT: http://rustfs:9000
+  # o navegador baixa anexos direto do bucket pela URL assinada
+  RUSTFS_PUBLIC_ENDPOINT: http://localhost:${RUSTFS_PORT:-9000}
+  RUSTFS_USE_SSL: "false"
+  RUSTFS_REGION: *s3-region
+  RUSTFS_ACCESS_KEY: *s3-access-key
+  RUSTFS_SECRET_KEY: *s3-secret-key
+  RUSTFS_BUCKET: *s3-bucket
+
+x-app-env-file: &app-env-file
+  - path: app/.env
+    required: false
+
+services:
+  frontend:
+    build:
+      context: app
+      dockerfile: Dockerfile.front
+    image: tania-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONT_PORT:-3000}:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: backend
+    image: tania-backend
+    restart: unless-stopped
+    env_file: *app-env-file
+    environment:
+      <<: *app-env
+      PORT: "3100"
+      LEGACY_UPSTREAM: http://legacy:3101
+      # admin criado só se a tabela usuarios estiver vazia; troque a senha na tela 👥 Usuários
+      TANIA_BOOTSTRAP_ADMIN: ${TANIA_BOOTSTRAP_ADMIN:-admin:admin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      legacy:
+        condition: service_started
+      rustfs-init:
+        condition: service_completed_successfully
+
+  # rotas ainda não portadas (finance, agente, ClickUp, WhatsApp...); só o backend fala com ele
+  legacy:
+    build: app
+    image: tania-app
+    restart: unless-stopped
+    env_file: *app-env-file
+    environment:
+      <<: *app-env
+      PORT: "3101"
+      # vazio: o Node não tem login próprio aqui; só entra o que vem do backend com LEGACY_PROXY_SECRET
+      VAULT_AUTH: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rustfs-init:
+        condition: service_completed_successfully
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: *pg-user
+      POSTGRES_PASSWORD: *pg-password
+      POSTGRES_DB: *pg-db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # stub do schema alugueis (de outro projeto) para as migrações do app passarem
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rustfs:
+    image: rustfs/rustfs:1.0.4
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: *s3-access-key
+      RUSTFS_SECRET_KEY: *s3-secret-key
+    ports:
+      - "127.0.0.1:${RUSTFS_PORT:-9000}:9000"
+    volumes:
+      - rustfs-data:/data
+
+  # cria o bucket com versioning (SPEC §8.3) e sai; idempotente
+  rustfs-init:
+    image: amazon/aws-cli:2.27.0
+    environment:
+      AWS_ACCESS_KEY_ID: *s3-access-key
+      AWS_SECRET_ACCESS_KEY: *s3-secret-key
+      AWS_DEFAULT_REGION: *s3-region
+      BUCKET: *s3-bucket
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        S3="aws --endpoint-url http://rustfs:9000"
+        for i in $$(seq 30); do $$S3 s3 ls >/dev/null 2>&1 && break; sleep 1; done
+        $$S3 s3api head-bucket --bucket "$$BUCKET" 2>/dev/null || $$S3 s3 mb "s3://$$BUCKET"
+        $$S3 s3api put-bucket-versioning --bucket "$$BUCKET" --versioning-configuration Status=Enabled
+        echo "bucket $$BUCKET pronto"
+    depends_on:
+      - rustfs
+
+volumes:
+  postgres-data:
+  rustfs-data:

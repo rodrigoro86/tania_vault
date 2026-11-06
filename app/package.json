@@ -1,0 +1,40 @@
+{
+  "name": "vault-front",
+  "version": "0.13.0",
+  "private": true,
+  "type": "module",
+  "description": "Front React (estilo Obsidian) para ler o vault em modo leitura, servido por nginx.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && tsc -p tsconfig.server.json && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json",
+    "preview": "vite preview",
+    "ssr-smoke": "node scripts/ssr-render-smoke.mjs",
+    "browser-smoke": "node scripts/browser-smoke.mjs",
+    "test": "node --test server/tests/*.test.mjs",
+    "minio-smoke": "node scripts/minio-smoke.mjs",
+    "whatsapp-smoke": "node scripts/whatsapp-smoke.mjs",
+    "db-smoke": "node scripts/db-smoke.mjs",
+    "serve": "node server/server.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@aws-sdk/s3-request-presigner": "^3.1161.0",
+    "docx": "^9.5.1",
+    "pg": "^8.23.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "react-router-dom": "^6.28.0",
+    "remark-gfm": "^4.0.1",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
