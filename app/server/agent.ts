@@ -55,6 +55,7 @@ import {
 } from './agent/rules.ts';
 import { READ_CHUNK, briefOutline, compactHistory, maxTokensFor, readPart } from './agent/context.ts';
 import { applyEdits } from './agent/edits.ts';
+import { carregarTools, type FunctionSpec, type Remotas } from './agent/tools-remotas.ts';
 
 /** teto de segurança contra loop; o agente trabalha até terminar, sem pedir para continuar */
 const MAX_STEPS = 60;
@@ -92,6 +93,8 @@ export interface ToolOutput {
 interface ToolContext {
   /** plano em vigor neste pedido (null = nada pode escrever) */
   approved: Plan | null;
+  /** funções MCP das tools registradas (Task 4); ausente = só as do núcleo */
+  remotas?: Remotas | null;
 }
 
 interface Tool {
@@ -1045,14 +1048,17 @@ export const TOOLS: Record<string, Tool> = {
 export const WRITE_TOOLS = new Set(['create_note', 'append_to_note', 'update_note', 'edit_note', 'move_note', 'create_folder', 'create_file', 'update_file', 'edit_file']);
 
 export async function runTool(name: string, rawArgs: string, ctx: ToolContext): Promise<ToolOutput> {
-  const tool = TOOLS[name];
-  if (!tool) return fail(`ferramenta desconhecida: ${name}`);
   let args: unknown;
   try {
     args = rawArgs ? JSON.parse(rawArgs) : {};
   } catch {
     return fail('argumentos não são JSON válido');
   }
+  // funções das tools registradas (MCP) vêm antes das ferramentas do núcleo
+  const remota = ctx.remotas?.call(name, args);
+  if (remota) return await remota;
+  const tool = TOOLS[name];
+  if (!tool) return fail(`ferramenta desconhecida: ${name}`);
   try {
     return await tool.execute(args, ctx);
   } catch (err) {
@@ -1144,7 +1150,7 @@ const LIBRARIAN = [
   '  move_note já atualiza os [[links]] das outras notas. Você move notas, não anexos. Nunca apague nem altere o texto das notas ao organizar.',
 ];
 
-async function systemPrompt(focus: FocusNote | null = null): Promise<string> {
+async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''): Promise<string> {
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
     .format(new Date());
   const [agents, conventions] = await Promise.all([readOptional('AGENTS.md'), readOptional('99-Meta/Convencoes.md')]);
@@ -1199,6 +1205,7 @@ async function systemPrompt(focus: FocusNote | null = null): Promise<string> {
     'ClickUp (SÓ LEITURA): clickup_tasks e clickup_task consultam tarefas suas e da equipe. Você não cria nem altera nada no',
     '  ClickUp; se pedirem, explique que a integração é só de leitura. Resumos podem virar nota (com plano), citando a URL das tarefas.',
     '',
+    ...(remotasPrompt ? ['Tools instaladas:', remotasPrompt, ''] : []),
     'Tamanho (limites do modelo):',
     `- Leitura: read_note/read_file acima de ${READ_CHUNK} caracteres vêm em partes (outline + trecho). Leia só as seções necessárias;`,
     '  não invente o que não leu. Resultados de turnos antigos são compactados: releia se precisar.',
@@ -1227,15 +1234,18 @@ async function systemPrompt(focus: FocusNote | null = null): Promise<string> {
 
 /* ---------- LLM ---------- */
 
-function toolSpecs() {
-  return Object.entries(TOOLS).map(([name, t]) => ({
-    type: 'function',
-    function: { name, description: t.description, parameters: t.parameters },
-  }));
+function toolSpecs(remotas: FunctionSpec[] = []) {
+  return [
+    ...Object.entries(TOOLS).map(([name, t]) => ({
+      type: 'function',
+      function: { name, description: t.description, parameters: t.parameters },
+    })),
+    ...remotas,
+  ];
 }
 
 /** truncated: a resposta parou no max_tokens (finish_reason "length") — texto e argumentos podem estar pela metade */
-async function complete(cfg: Provider, messages: ChatMessage[], signal: AbortSignal): Promise<{ reply: ChatMessage; truncated: boolean }> {
+async function complete(cfg: Provider, messages: ChatMessage[], signal: AbortSignal, remotas: FunctionSpec[] = []): Promise<{ reply: ChatMessage; truncated: boolean }> {
   const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
     method: 'POST',
     signal,
@@ -1246,7 +1256,7 @@ async function complete(cfg: Provider, messages: ChatMessage[], signal: AbortSig
     body: JSON.stringify({
       model: cfg.model,
       messages,
-      tools: toolSpecs(),
+      tools: toolSpecs(remotas),
       tool_choice: 'auto',
       ...(cfg.maxTokens ? { max_tokens: cfg.maxTokens } : {}),
     }),
@@ -1306,13 +1316,17 @@ export async function runAgent(
   focus: FocusNote | null = null,
 ): Promise<ChatMessage[]> {
   const fresh: ChatMessage[] = [];
-  const messages: ChatMessage[] = [{ role: 'system', content: await systemPrompt(focus) }, ...history];
-  const ctx: ToolContext = { approved };
+  const remotas = await carregarTools().catch((err) => {
+    console.warn('agent: tools remotas indisponíveis:', (err as Error)?.message ?? err);
+    return { specs: [], prompt: '', call: () => null } as Remotas;
+  });
+  const messages: ChatMessage[] = [{ role: 'system', content: await systemPrompt(focus, remotas.prompt) }, ...history];
+  const ctx: ToolContext = { approved, remotas };
 
   let continuations = 0;
   for (let step = 0; step < MAX_STEPS; step++) {
     if (signal.aborted) break;
-    const { reply, truncated } = await complete(provider, messages, signal);
+    const { reply, truncated } = await complete(provider, messages, signal, remotas.specs);
     const limit = provider.maxTokens ? ` (max_tokens ${provider.maxTokens})` : '';
     const textCut = truncated && !reply.tool_calls?.length;
     // texto cortado no limite: o servidor pede a continuação sozinho (até MAX_CONTINUATIONS vezes)
