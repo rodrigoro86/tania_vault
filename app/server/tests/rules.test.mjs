@@ -168,13 +168,25 @@ test('wikilinks dentro de código são exemplo, não link', () => {
   assert.deepEqual(wikilinks('Ver [[Git]].\n\n```markdown\n![[deck.html]]\n```\n\nE `[[inline]]`.'), ['Git']);
 });
 
-test('diário: um arquivo por dia em 01-Diario', () => {
+test('diário: um arquivo por dia em 01-Agenda (tag agenda/diario)', () => {
   const dia = '---\ntype: journal\ncreated: 2026-11-01\ntags: [agenda/diario]\nstatus: open\n---\n\n# 2026-11-01\n\n- feito\n';
-  assert.deepEqual(checkNote('01-Diario/2026-11-01.md', dia, targets).errors, []);
-  for (const p of ['01-Diario/2026-11-01-Reuniao.md', '01-Diario/Reuniao.md', '01-Diario/2026/2026-11-01.md']) {
+  assert.deepEqual(checkNote('01-Agenda/2026-11-01.md', dia, targets).errors, []);
+  for (const p of ['01-Agenda/2026-11-01-Reuniao.md', '01-Agenda/Reuniao.md', '01-Agenda/2026/2026-11-01.md', 'Outra/2026-11-01.md']) {
     assert.match(checkNote(p, dia, targets).errors.join('\n'), /um arquivo por dia/, p);
   }
-  assert.match(checkNote('Outra/2026-11-01.md', dia, targets).warnings.join('\n'), /mora em 01-Diario\//);
+  // outras notas da agenda (relatório, reunião) não são o diário: nome livre
+  const relatorio = dia.replace('agenda/diario', 'agenda/revisao');
+  assert.deepEqual(checkNote('01-Agenda/2026-11-01-Relatorio.md', relatorio, targets).errors, []);
+});
+
+test('tipos do ambiente de teste: cada um sugere a sua pasta', () => {
+  const nota = (type, tag) => `---\ntype: ${type}\ncreated: 2026-11-01\ntags: [${tag}]\nstatus: open\n---\n\n# Nota\n`;
+  for (const [type, tag, pasta] of [['test', 'teste', '02-Testes'], ['improvement', 'melhoria', '03-Melhorias'], ['spec', 'especificacao', '04-Especificacoes'], ['doc', 'documentacao', '05-Documentacao']]) {
+    const ok = checkNote(`${pasta}/Login/x.md`, nota(type, tag), targets);
+    assert.deepEqual(ok.errors, [], type);
+    assert.ok(!ok.warnings.some((w) => /mora em/.test(w)), type);
+    assert.ok(checkNote('Outra/x.md', nota(type, tag), targets).warnings.some((w) => w.includes(`mora em ${pasta}/`)), type);
+  }
 });
 
 test('tópicos: subpastas seguem valendo para o type', () => {

@@ -8,18 +8,30 @@ import { SKIP_DIRS } from '../storage/constants.mjs';
 
 /* ---------- vocabulário (AGENTS.md §1-2) ---------- */
 
-export const NOTE_TYPES = ['command', 'learning', 'journal', 'project', 'agent', 'prompt', 'workflow', 'run', 'inbox', 'idea'] as const;
+export const NOTE_TYPES = [
+  'journal', 'test', 'improvement', 'spec', 'doc', 'inbox',
+  'agent', 'prompt', 'workflow', 'run',
+  // legado (vault pessoal anterior): continuam válidos, fora do mapa sugerido ao agente
+  'command', 'learning', 'project', 'idea',
+] as const;
 export type NoteType = (typeof NOTE_TYPES)[number];
 
 export const STATUSES = ['draft', 'active', 'open', 'done', 'archived'] as const;
 export const CONFIDENCE = ['low', 'medium', 'high'] as const;
 export const OUTCOMES = ['success', 'partial', 'fail'] as const;
 
-/** AGENTS.md §1: onde cada type costuma morar (recomendação, não bloqueio) */
+/** types do vault pessoal antigo: válidos, mas fora do mapa que o agente usa para sugerir/criar */
+export const LEGACY_TYPES = new Set<NoteType>(['command', 'learning', 'project', 'idea']);
+
+/** AGENTS.md §1: onde cada type costuma morar (recomendação, não bloqueio) — ambiente de análise e teste */
 export const FOLDER_BY_TYPE: Record<NoteType, string> = {
+  journal: '01-Agenda/',
+  test: '02-Testes/',
+  improvement: '03-Melhorias/',
+  spec: '04-Especificacoes/',
+  doc: '05-Documentacao/',
   command: '03-Comandos/',
   learning: '02-Estudos/',
-  journal: '01-Diario/',
   project: '04-Projetos/',
   agent: '04-Agentes/Agentes/',
   prompt: '04-Agentes/Prompts/',
@@ -32,6 +44,7 @@ export const FOLDER_BY_TYPE: Record<NoteType, string> = {
 /** Convencoes.md: tags oficiais (lista fechada) */
 export const OFFICIAL_TAGS = [
   'inbox', 'ideia', 'link',
+  'teste', 'teste/passou', 'teste/falhou', 'teste/bloqueado', 'melhoria', 'especificacao', 'documentacao',
   'agenda/diario', 'agenda/revisao', 'agenda/tarefa', 'agenda/sprint', 'apresentacao', 'projeto',
   'comando', 'comando/git', 'comando/shell', 'comando/gis', 'comando/docker', 'comando/python', 'comando/llm',
   'aprendizado', 'aprendizado/llm', 'aprendizado/obsidian', 'aprendizado/gis', 'aprendizado/dev',
@@ -75,6 +88,10 @@ export const FRONTMATTER: Record<NoteType, ReturnType<typeof s.object>> = {
   workflow: s.object({ type: s.oneOf(['workflow']), ...base }, { passthrough: true }),
   inbox: s.object({ type: s.oneOf(['inbox']), ...base }, { passthrough: true }),
   idea: s.object({ type: s.oneOf(['idea']), ...base }, { passthrough: true }),
+  test: s.object({ type: s.oneOf(['test']), ...base }, { passthrough: true }),
+  improvement: s.object({ type: s.oneOf(['improvement']), ...base }, { passthrough: true }),
+  spec: s.object({ type: s.oneOf(['spec']), ...base }, { passthrough: true }),
+  doc: s.object({ type: s.oneOf(['doc']), ...base }, { passthrough: true }),
 };
 
 export type Frontmatter = Record<string, string | string[]>;
@@ -168,7 +185,8 @@ export interface NoteCheck {
   warnings: Issues;
 }
 
-const DIARY_NOTE = /^01-Diario\/\d{4}-\d{2}-\d{2}\.md$/;
+const DIARY_NOTE = /^01-Agenda\/\d{4}-\d{2}-\d{2}\.md$/;
+
 const RELATIVE_DATES = /\b(ontem|anteontem|amanh[ãa]|semana passada|m[eê]s passado|recentemente)\b/i;
 
 /**
@@ -225,7 +243,8 @@ export function checkNote(path: string, content: string, targets: Set<string>): 
     errors.push('nota de comando precisa do comando exato num bloco ```bash (AGENTS.md §3.6)');
   }
 
-  if (path.startsWith(FOLDER_BY_TYPE.journal) && !DIARY_NOTE.test(path)) {
+  // o diário (tag agenda/diario) é um arquivo por dia; outras notas da agenda (relatórios, reuniões) são livres
+  if (tags.includes('agenda/diario') && !DIARY_NOTE.test(path)) {
     errors.push(`${path}: o diário tem um arquivo por dia (${FOLDER_BY_TYPE.journal}AAAA-MM-DD.md); acrescente o conteúdo no arquivo do dia`);
   }
 

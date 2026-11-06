@@ -39,6 +39,7 @@ import { s, check, type Schema, type Issues } from './agent/schema.ts';
 import {
   NOTE_TYPES,
   FOLDER_BY_TYPE,
+  LEGACY_TYPES,
   OFFICIAL_TAGS,
   Plan,
   checkPlan,
@@ -51,6 +52,7 @@ import {
   parseFrontmatter,
   linkTargets,
   type PlanAction,
+  type NoteType,
 } from './agent/rules.ts';
 import { READ_CHUNK, briefOutline, compactHistory, maxTokensFor, readPart } from './agent/context.ts';
 import { applyEdits } from './agent/edits.ts';
@@ -735,14 +737,14 @@ export async function loadFocus(raw: unknown): Promise<FocusNote | null> {
 
 /** modo ideia: parceiro de brainstorm que vai estruturando a nota */
 const IDEA_MODE = [
-  'MODO IDEIA: esta é uma ideia em construção. Atue como parceiro de brainstorm:',
+  'MODO MELHORIA: esta é uma melhoria (ou ideia) em construção. Atue como parceiro de análise:',
   '- Comece resumindo em 1-2 linhas o que já está claro na nota.',
   '- Faça no máximo 2 perguntas curtas por vez para desenvolver o que falta: problema, para quem, proposta,',
   '  como funcionaria, o que já existe parecido, diferencial, riscos, primeiro experimento barato.',
   '- Sugira variações e ângulos inesperados quando ajudar; ideias malucas são bem-vindas.',
   '- Quando houver material (ou o usuário pedir), proponha um plano com append_to_note nesta nota, em seções',
   '  como "## Problema", "## Proposta", "## Perguntas em aberto", "## Próximos passos". Nunca apague o que existe.',
-  '- Se a ideia amadurecer em algo com prazo, sugira virar projeto: move_note para 04-Projetos/ com type project.',
+  '- Se a melhoria amadurecer (escopo e critério de aceite claros), sugira virar especificação: move_note para 04-Especificacoes/ com type spec.',
 ];
 
 function focusSection(focus: FocusNote | null): string[] {
@@ -752,7 +754,7 @@ function focusSection(focus: FocusNote | null): string[] {
     `O usuário abriu o terminal a partir de ${focus.path} (type: ${focus.type || 'sem type'}). Ela é o contexto principal:`,
     '"esta nota", "a ideia", "o texto" se referem a ela. Para escrever nela, use append_to_note (ou update_note',
     'se pedirem para reescrever) num plano, como sempre. O conteúdo abaixo é relido do disco a cada mensagem.',
-    ...(focus.type === 'idea' ? IDEA_MODE : []),
+    ...(focus.type === 'idea' || focus.type === 'improvement' ? IDEA_MODE : []),
     ...focusBody(focus),
     '--- fim da nota em foco ---',
     '',
@@ -779,10 +781,10 @@ function focusBody(focus: FocusNote): string[] {
 /** bibliotecária: a organização é sugestão e pedido do usuário, nunca bloqueio */
 const LIBRARIAN = [
   'Bibliotecária do vault (você também faz este papel): o usuário cria pastas e notas onde quiser; nada é proibido por pasta.',
-  `- Mapa de referência (type -> pasta): ${Object.entries(FOLDER_BY_TYPE).map(([t, f]) => `${t} -> ${f}`).join(', ')}.`,
+  `- Mapa de referência (type -> pasta): ${Object.entries(FOLDER_BY_TYPE).filter(([t]) => !LEGACY_TYPES.has(t as NoteType)).map(([t, f]) => `${t} -> ${f}`).join(', ')}.`,
   '  00-Inbox guarda o que ainda não foi triado. As pastas que o usuário criou também valem: aprenda com a estrutura real antes de sugerir.',
-  '- Diário: 01-Diario/ tem UM arquivo por dia, AAAA-MM-DD.md, com a data de hoje acima. Tudo o que foi feito no dia vai nesse arquivo: leia antes; se existir, use append_to_note; se não, create_note com type journal. Nunca crie outro arquivo para o mesmo dia.',
-  '- Tópicos: organize do geral para o específico, em Categoria/Tópico/Assunto. Ex.: 04-Projetos/Pessoal/Tania/, 05-Ideias/Casa/Reformar-a-casa.md, 02-Estudos/Infra/Kubernetes/.',
+  '- Agenda: o diário fica em 01-Agenda/, UM arquivo por dia (AAAA-MM-DD.md, tag agenda/diario), com a data de hoje acima. Tudo o que foi feito no dia vai nesse arquivo: leia antes; se existir, use append_to_note; se não, create_note com type journal. Nunca crie outro arquivo de diário para o mesmo dia. Reuniões e relatórios da agenda têm nome livre.',
+  '- Tópicos: organize do geral para o específico, por módulo/funcionalidade do sistema analisado. Ex.: 02-Testes/Login/Senha-errada.md, 03-Melhorias/Relatorios/Exportar-CSV.md, 04-Especificacoes/Usuarios/, 05-Documentacao/Instalacao.md.',
   '  Vale também para nota nova: escolha o tópico ao criar, sem perguntar. Assunto com várias notas vira pasta própria; nota única fica direto no tópico.',
   '  Antes de criar uma pasta, veja em list_notes o campo folders e reaproveite o tópico que já existe, sem criar variações do mesmo nome. Tópico é curto, em português, com hyphens. O diário não usa tópicos.',
   '- SUGERIR ("como organizo?", "onde guardo isto?", "o que está fora do lugar?"): leia com list_notes/read_note e responda com sugestões e o motivo de cada uma. Não chame propose_plan e não altere nada.',
@@ -801,8 +803,9 @@ async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''):
   ]);
   const agentesTania = await listarAgentes(store);
   return [
-    'Você é o agente do vault Obsidian do usuário, operando por um terminal no site do vault.',
-    'Sua função: organizar e escrever documentos do vault usando APENAS as ferramentas disponíveis.',
+    'Você é a Tania, agente do vault do usuário, operando pelo terminal do site e pelo WhatsApp.',
+    'O vault é um ambiente de análise e teste de sistemas: agenda, testes, melhorias, especificações e documentação.',
+    'Sua função: registrar, organizar e escrever esses documentos usando APENAS as ferramentas disponíveis.',
     `Agora: ${today} (America/Sao_Paulo). Use datas ISO explícitas nas notas.`,
     '',
     'Fluxo obrigatório:',

@@ -420,7 +420,9 @@ Ver [[Git-status]].
     assert.equal(await fs.readFile(path.join(ROOT, 'Ponte.md'), 'utf8'), 'veja [[Antiga-2]] e [[Antiga-2|ela]]\n');
     const sys = seen[0].body.messages[0].content;
     assert.match(sys, /Bibliotecária do vault/);
-    assert.match(sys, /Categoria\/Tópico\/Assunto/);
+    assert.match(sys, /por módulo\/funcionalidade do sistema analisado/);
+    assert.match(sys, /test -> 02-Testes\//);
+    assert.doesNotMatch(sys, /command -> 03-Comandos/, "tipos legados fora do mapa");
     assert.match(sys, /SUGERIR.*Não chame propose_plan/);
   });
 
@@ -435,7 +437,7 @@ Ver [[Git-status]].
     const sys = seen[0].body.messages[0].content;
     assert.match(sys, /NOTA EM FOCO/);
     assert.match(sys, /05-Ideias\/Vault-que-fala\.md \(type: idea\)/);
-    assert.match(sys, /MODO IDEIA/);
+    assert.match(sys, /MODO MELHORIA/);
     assert.match(sys, /IDEIA-ORIGINAL/);
 
     // editou no disco (ex.: o agente acrescentou): o próximo pedido já vê o conteúdo novo
@@ -447,7 +449,7 @@ Ver [[Git-status]].
     // nota comum: contexto sem modo ideia; sem contexto: nada de nota em foco
     script = [{ content: 'ok' }, { content: 'ok' }];
     await chat([{ role: 'user', content: 'resuma' }], undefined, '03-Comandos/Git/Git-status.md');
-    assert.doesNotMatch(seen.at(-1).body.messages[0].content, /MODO IDEIA/);
+    assert.doesNotMatch(seen.at(-1).body.messages[0].content, /MODO MELHORIA/);
     assert.match(seen.at(-1).body.messages[0].content, /NOTA EM FOCO/);
     await chat([{ role: 'user', content: 'oi' }]);
     assert.doesNotMatch(seen.at(-1).body.messages[0].content, /NOTA EM FOCO/);
