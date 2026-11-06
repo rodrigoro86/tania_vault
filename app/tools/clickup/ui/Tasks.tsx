@@ -273,9 +273,14 @@ export function TasksPage() {
           <p className="flash">{status.error}</p>
         ) : (
           <>
-            <p>ClickUp ainda não configurado. No servidor, crie <code>app/clickup.config.json</code> (fora do git):</p>
-            <pre className="code-block">{'{\n  "token": "pk_...",\n  "teamId": "opcional",\n  "spaceIds": ["opcional"]\n}'}</pre>
-            <p className="muted">Token: ClickUp → Settings → Apps → API Token. A integração é só de leitura.</p>
+            <p>
+              ClickUp ainda não configurado. Um admin define o <code>CLICKUP_TOKEN</code> em{' '}
+              <a href="/#/tools-admin" target="_top">⚙ Configurações → Tools</a>.
+            </p>
+            <p className="muted">
+              Token: ClickUp → Settings → Apps → API Token. A integração é só de leitura. Opcional: <code>teamId</code> e{' '}
+              <code>spaceIds</code> em <code>app/clickup.config.json</code> no servidor.
+            </p>
           </>
         )}
       </div>
