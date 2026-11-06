@@ -11,13 +11,7 @@
  */
 import { decifrar } from '../config-db.mjs';
 
-export interface ToolOutput {
-  ok: boolean;
-  summary: string;
-  result: unknown;
-  issues?: unknown[];
-  warnings?: unknown[];
-}
+import type { ToolOutput } from '../agent.ts';
 
 export interface FunctionSpec {
   type: 'function';
@@ -200,7 +194,7 @@ async function manifesto(reg: Registro, signal: AbortSignal): Promise<{ nome: st
 }
 
 /** manifesto + initialize + tools/list de uma tool, dentro de LOAD_MS */
-async function carregarTool(reg: Registro): Promise<{ nome: string; prompt: string; funcoes: Funcao[] }> {
+async function carregarTool(reg: Registro): Promise<{ nome: string; prompt: string; funcoes: Omit<Funcao, 'name'>[] }> {
   const signal = AbortSignal.timeout(LOAD_MS);
   const info = await manifesto(reg, signal);
 

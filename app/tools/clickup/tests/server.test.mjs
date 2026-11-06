@@ -91,6 +91,7 @@ const mcp = async (method, params, secret = SEG) => {
 };
 
 test('segredo: sem header ou errado → 401 em todas as rotas', async () => {
+  assert.equal((await semSegredo('/api/health')).status, 200, 'healthcheck da imagem não tem segredo');
   for (const [p, init] of [
     ['/manifest.json', {}],
     ['/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"jsonrpc":"2.0","method":"tools/list"}' }],

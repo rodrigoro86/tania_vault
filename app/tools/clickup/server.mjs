@@ -81,6 +81,9 @@ export function criarServidor() {
       const url = new URL(req.url ?? '/', 'http://tool');
       const pathname = url.pathname;
 
+      // healthcheck da imagem (Dockerfile) não tem o segredo e não expõe nada
+      if (pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true });
+
       if (!segredoOk(req)) return json(res, 401, { ok: false, error: 'segredo da tool ausente ou incorreto' });
 
       if (pathname === '/manifest.json' && req.method === 'GET') return json(res, 200, MANIFESTO);

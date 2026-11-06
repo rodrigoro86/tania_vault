@@ -54,7 +54,7 @@ export const FERRAMENTAS: Record<string, FerramentaMcp> = {
     }),
     async run(args) {
       const st = await clickupStatus();
-      if (!st.configured) return fail('ClickUp não configurado: falta app/clickup.config.json com o token');
+      if (!st.configured) return fail('ClickUp não configurado: defina o CLICKUP_TOKEN em ⚙ Configurações → Tools');
       const personArg = args.person as string | undefined;
       const spaceArg = args.space as string | undefined;
       const projectArg = args.project as string | undefined;
