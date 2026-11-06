@@ -24,6 +24,10 @@ Define **quem é dono de quê** no projeto Tania_Assistente e as regras para que
 
 ## 2. Papéis (cada agente é dono de arquivos e NÃO invade o dos outros)
 
+> As instruções de cada agente (`agents/*.md`) vivem no vault de produção, em `99-Meta/Agentes/Equipe/`, editáveis pelo
+> front. O repo guarda a cópia: `node scripts/agentes.mjs pull` antes de cada delegação. As instruções do agente da
+> Tania ficam em `99-Meta/Agentes/Tania.md` e entram no prompt dele a cada pedido.
+
 | Agente | Dono de | Responsável por | Não mexe em |
 |---|---|---|---|
 | **agent-spec** | `SPEC.md`, `AGENTS.md` | manter docs = decisões travadas; registrar mudanças de contrato | código em `app/` |
@@ -51,6 +55,7 @@ backend/** (Rust, migração)    → mesmo dono do domínio em app/server: http/
                                  storage/ → agent-storage, db/+reminders/+investimentos/ → agent-data,
                                  whatsapp/ → agent-evolution, tools/ → agent-backend
 scripts/parity.mjs             → agent-reviewer
+scripts/agentes.mjs            → agent-spec (sincroniza agents/*.md com o vault)
 SPEC.md / AGENTS.md            → agent-spec
 tudo (review + testes)           → agent-reviewer
 ```

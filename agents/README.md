@@ -3,6 +3,10 @@
 Esta pasta contém **um arquivo por agente**, cada um autocontido (dá para usar
 direto como prompt de delegação). A carta-mestra está em [`../AGENTS.md`](../AGENTS.md).
 
+> **Fonte de verdade: o vault de produção**, em `99-Meta/Agentes/Equipe/` (edite pelo front: 🤖 Agents → Instruções).
+> Estes arquivos são a cópia baixada: rode `node scripts/agentes.mjs pull` antes de delegar. Primeira vez:
+> `node scripts/agentes.mjs login` e `node scripts/agentes.mjs push` (só cria o que não existe no vault).
+
 ## Índice
 
 | Agente | Arquivo | Dono de | Fase |
@@ -17,6 +21,7 @@ direto como prompt de delegação). A carta-mestra está em [`../AGENTS.md`](../
 
 ## Como usar
 
+0. Antes de tudo: `node scripts/agentes.mjs pull` (traz as edições feitas no front).
 1. Para delegar uma fase, use o arquivo do agente dono como prompt (ex.: Fase 1 →
    `agent-storage.md`).
 2. Ao terminar a fase, rode o `agent-reviewer.md` (sync gate) antes de marcar como pronta.

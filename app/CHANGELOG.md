@@ -8,6 +8,9 @@ Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.m
 
 ## [Não lançado]
 
+### Adicionado
+- 🤖 Painel Agents ganha a seção **Instruções**: abre as notas de `99-Meta/Agentes/` (Tania e equipe) no editor. O agente lê `99-Meta/Agentes/Tania.md` a cada pedido.
+
 ### Alterado
 - ☑ Tarefas e 📊 Painel ClickUp agora são páginas da tool, montadas dentro do iframe: `app/tools/clickup/ui/` (`Tasks.tsx`, `Dashboard.tsx`, `main.tsx` + `tarefas.html`, `painel.html`, `card.html`), com entrada própria no Vite (`build.rollupOptions.input`) e saída em `dist/tools/clickup/ui/`. A API chamada pelo front passa de `/api/clickup/*` para `/tools/clickup/api/*`, e os links para notas/rotas do front usam `/#/...` com `target="_top"` (fora do iframe). O `body` ganha a classe `tool-embed`. `tsconfig.json` passa a checar `tools/`.
 

@@ -408,6 +408,10 @@ vence o `app/agent.config.json`, que vira só a alternativa. Spec: `docs/superpo
 
 A troca do ativo continua em `POST /api/agent/config` (Node), que grava no banco quando a config vem de lá.
 
+**Instruções** (spec `docs/superpowers/specs/2026-11-06-agentes-no-vault-design.md`): `99-Meta/Agentes/Tania.md` entra no prompt
+do agente a cada pedido (ausente = nada muda); `99-Meta/Agentes/Equipe/*.md` são as instruções da equipe de desenvolvimento,
+sincronizadas com `agents/*.md` por `scripts/agentes.mjs`. O painel 🤖 Agents lista essas notas em "Instruções".
+
 ### 7.10 Tools (funcionalidades plugáveis)
 
 Uma **tool** é um serviço HTTP com contrato fixo: `GET /manifest.json` (id, nome, ícone, páginas, vínculos, config, prompt),

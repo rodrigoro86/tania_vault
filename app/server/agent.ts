@@ -1062,7 +1062,12 @@ const LIBRARIAN = [
 async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''): Promise<string> {
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
     .format(new Date());
-  const [agents, conventions] = await Promise.all([readOptional('AGENTS.md'), readOptional('99-Meta/Convencoes.md')]);
+  const [agents, conventions, tania] = await Promise.all([
+    readOptional('AGENTS.md'),
+    readOptional('99-Meta/Convencoes.md'),
+    // como o usuário quer que a Tania trabalhe: editado no front (painel 🤖 Agents → Instruções)
+    readOptional('99-Meta/Agentes/Tania.md'),
+  ]);
   return [
     'Você é o agente do vault Obsidian do usuário, operando por um terminal no site do vault.',
     'Sua função: organizar e escrever documentos do vault usando APENAS as ferramentas disponíveis.',
@@ -1135,6 +1140,7 @@ async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''):
     '',
     '===== 99-Meta/Convencoes.md =====',
     conventions || '(não encontrado)',
+    ...(tania.trim() ? ['', '===== 99-Meta/Agentes/Tania.md (instruções do usuário para você) =====', tania] : []),
   ].join('\n');
 }
 

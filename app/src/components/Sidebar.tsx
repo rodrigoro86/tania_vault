@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import type { TreeNode, VaultFile, FileKind } from '../vault';
+import { notes as vaultNotes, type TreeNode, type VaultFile, type FileKind } from '../vault';
 import { vaultApi } from '../api';
 import UserMenu from './UserMenu';
 import Ribbon, { BASE_VIEWS, type LeftView } from './Ribbon';
@@ -336,7 +336,10 @@ interface AgentStatus {
   active?: string | null;
 }
 
-function AgentsPane() {
+/** instruções dos agentes no vault (spec 2026-11-06-agentes-no-vault): Tania primeiro, depois a equipe */
+const INSTRUCOES = '99-Meta/Agentes/';
+
+function AgentsPane({ currentPath }: { currentPath: string }) {
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [flash, setFlash] = useState('');
 
@@ -380,6 +383,10 @@ function AgentsPane() {
   }
 
   const providers = status?.providers ?? [];
+  // Tania.md primeiro; o resto (Equipe/...) em ordem alfabética
+  const instrucoes = vaultNotes
+    .filter((n) => n.path.startsWith(INSTRUCOES))
+    .sort((a, b) => (a.path.endsWith('/Tania.md') ? -1 : b.path.endsWith('/Tania.md') ? 1 : a.path.localeCompare(b.path)));
 
   return (
     <div className="sidebar-body">
@@ -403,6 +410,23 @@ function AgentsPane() {
       })}
       {/* sempre visível: a página /agentes decide se mostra o formulário ou "sem permissão" */}
       <Link className="sidebar-shortcut" to="/agentes">⚙ Gerenciar agents</Link>
+
+      <p className="sidebar-section-title">Instruções</p>
+      {instrucoes.length === 0 && (
+        <p className="muted">
+          Nenhuma instrução no vault (rode <code>node scripts/agentes.mjs push</code>).
+        </p>
+      )}
+      {instrucoes.map((n) => (
+        <Link
+          key={n.path}
+          className={`sidebar-shortcut${n.path === currentPath ? ' file-active' : ''}`}
+          to={`/${encode(n.path)}`}
+          title={n.path}
+        >
+          {n.path.slice(INSTRUCOES.length).replace(/\.md$/, '')}
+        </Link>
+      ))}
     </div>
   );
 }
@@ -736,7 +760,7 @@ export default function Sidebar({
             </div>
           )}
 
-          {view === 'agents' && <AgentsPane />}
+          {view === 'agents' && <AgentsPane currentPath={currentPath} />}
 
           {/* estado de escrita + sair: no rodapé fixo (App.tsx, .statusbar) */}
           <UserMenu />

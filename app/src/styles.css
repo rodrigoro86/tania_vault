@@ -1271,3 +1271,6 @@ a { color: var(--link); }
 /* página de tool dentro do iframe */
 body.tool-embed { background: transparent; }
 body.tool-embed #root { padding: 12px; }
+
+/* painel 🤖 Agents: título da seção Instruções */
+.sidebar-section-title { margin: 14px 8px 4px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
