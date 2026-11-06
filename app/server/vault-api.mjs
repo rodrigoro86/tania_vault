@@ -293,12 +293,6 @@ export async function handleVaultApi(req, res) {
       return await handleAgent(req, res, pathname);
     }
 
-    /* ---------- ClickUp (só leitura) ---------- */
-    if (pathname.startsWith('/api/clickup/')) {
-      const { handleClickUp } = await import('./clickup.ts');
-      return await handleClickUp(req, res, pathname);
-    }
-
     /* ---------- notas ---------- */
     if (pathname === '/api/notes' && req.method === 'GET') {
       return json(res, 200, await listVault());

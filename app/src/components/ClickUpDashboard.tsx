@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { expireSession } from '../api';
 // mesmos tipos que o servidor devolve: mudou lá, o build quebra aqui
-import type { Dashboard, DashboardGroup, Folder, Person } from '../../server/clickup-types.ts';
+import type { Dashboard, DashboardGroup, Folder, Person } from '../../tools/clickup/clickup-types.ts';
 
 /**
  * ClickUpDashboard.tsx — painel (dashboard) do ClickUp, SÓ LEITURA e SEPARADO

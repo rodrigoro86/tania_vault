@@ -1,28 +1,31 @@
 /**
  * clickup.ts — leitura do ClickUp (API v2), SÓ LEITURA: nada é criado ou
- * alterado no ClickUp a partir do vault.
+ * alterado no ClickUp a partir do vault. É a tool ClickUp, não o núcleo.
  *
- * Token: env CLICKUP_TOKEN (editável em ⚙ Configurações, salvo cifrado no banco) ou o
- * "token" de app/clickup.config.json; o env vence. O arquivo continua opcional para teamId/spaceIds:
+ * Token: primeiro o núcleo (GET {TANIA_CORE_URL}/api/core/config com
+ * `Authorization: Tool clickup:<segredo>`, cache 60 s; falha → segue normalmente);
+ * depois env CLICKUP_TOKEN (editável em ⚙ Configurações, salvo cifrado no banco) ou
+ * o "token" de app/clickup.config.json; o env vence sobre o arquivo. O arquivo continua opcional para teamId/spaceIds:
  *   { "token": "pk_...", "teamId": "opcional (padrão: 1º workspace)", "spaceIds": ["opcional: limita os espaços"] }
  * Relido a cada pedido. CLICKUP_CONFIG troca o caminho; CLICKUP_API_BASE troca a
  * URL da API (testes usam um servidor falso).
  *
- * Rotas (atrás do login do site):
- *   GET /api/clickup/status                  configurado? quem sou, workspace, espaços, pastas (projetos) com listas, membros
- *   GET /api/clickup/tasks?scope=me|team&assignee=<id>&space=<id>&folder=<id>&list=<id>&overdue=1&include_closed=1
+ * Rotas da tool (atrás do segredo, via proxy do núcleo):
+ *   GET /api/status                  configurado? quem sou, workspace, espaços, pastas (projetos) com listas, membros
+ *   GET /api/tasks?scope=me|team&assignee=<id>&space=<id>&folder=<id>&list=<id>&overdue=1&include_closed=1
  * space/folder/list precisam estar dentro dos espaços permitidos (spaceIds); tarefa
  * por id fora deles é recusada.
- *   GET /api/clickup/task/<id ou URL>
+ *   GET /api/task/<id ou URL>
  * Cache em memória de 60 s por consulta (limite da API: ~100 pedidos/min por token).
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ApiError } from './vault-api.mjs';
+import { ApiError } from './errors.mjs';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
-const configPath = () => path.resolve(process.env.CLICKUP_CONFIG || path.join(HERE, '..', 'clickup.config.json'));
+// o arquivo de sempre: app/clickup.config.json (CLICKUP_CONFIG troca o caminho)
+const configPath = () => path.resolve(process.env.CLICKUP_CONFIG || path.join(HERE, '..', '..', 'clickup.config.json'));
 const apiBase = () => (process.env.CLICKUP_API_BASE || 'https://api.clickup.com/api/v2').replace(/\/+$/, '');
 const CACHE_MS = 60_000;
 const MAX_PAGES = 5; // 5 x 100 tarefas por consulta da equipe
@@ -61,14 +64,44 @@ interface RawTask {
   text_content?: string | null;
 }
 
-/* formas normalizadas (front e agente): server/clickup-types.ts */
+/* formas normalizadas (front e agente): tools/clickup/clickup-types.ts */
 import type { Dashboard, DashboardGroup, Folder, Person, Task, TaskDetail } from './clickup-types.ts';
 export type { Dashboard, DashboardGroup, Folder, Person, Task, TaskDetail };
 
 
 /* ---------- config e cliente ---------- */
 
+/** token vindo do núcleo (⚙ Configurações): cache 60 s; falha → env/arquivo */
+const coreCache: { at: number; token: string | null } = { at: 0, token: null };
+
+async function tokenDoNucleo(): Promise<string | null> {
+  const base = process.env.TANIA_CORE_URL?.trim();
+  const secret = process.env.TANIA_TOOL_SECRET?.trim();
+  if (!base || !secret) return null;
+  if (coreCache.token && Date.now() - coreCache.at < CACHE_MS) return coreCache.token;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch(`${base.replace(/\/+$/, '')}/api/core/config`, {
+      headers: { Authorization: `Tool clickup:${secret}` },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { valores?: { CLICKUP_TOKEN?: string } };
+    const token = typeof data?.valores?.CLICKUP_TOKEN === 'string' ? data.valores.CLICKUP_TOKEN.trim() : '';
+    if (!token) return null;
+    coreCache.at = Date.now();
+    coreCache.token = token;
+    return token;
+  } catch {
+    return null; // núcleo fora do ar: segue com env/arquivo, como antes
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function loadConfig(): Promise<ClickUpConfig | null> {
+  const coreToken = await tokenDoNucleo();
   const envToken = process.env.CLICKUP_TOKEN?.trim();
   let cfg: Partial<ClickUpConfig> = {};
   let raw: string | null = null;
@@ -84,7 +117,7 @@ async function loadConfig(): Promise<ClickUpConfig | null> {
       throw new ApiError(500, `app/clickup.config.json inválido: ${(err as Error).message}`);
     }
   }
-  const token = envToken || (typeof cfg.token === 'string' ? cfg.token.trim() : '');
+  const token = coreToken || envToken || (typeof cfg.token === 'string' ? cfg.token.trim() : '');
   if (!token) return null;
   return {
     token,

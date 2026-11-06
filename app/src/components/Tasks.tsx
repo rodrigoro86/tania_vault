@@ -11,7 +11,7 @@ const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/')
 const fileBase = (r: ReportInput, kind: string) =>
   `${r.date}-${kind}-${r.scope.normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '')}`;
 // mesmos tipos que o servidor devolve: mudou lá, o build quebra aqui
-import type { Folder, Person, Task } from '../../server/clickup-types.ts';
+import type { Folder, Person, Task } from '../../tools/clickup/clickup-types.ts';
 
 /**
  * Tasks.tsx — tarefas do ClickUp (SÓ LEITURA): minhas ou da equipe, filtradas

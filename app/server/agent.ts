@@ -36,7 +36,6 @@ import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { store, ApiError, sanitize, sanitizeFile, listVault, readJson, writeVaultFile } from './vault-api.mjs';
 import { s, check, type Schema, type Issues } from './agent/schema.ts';
-import { clickupStatus, listTasks, getTask, type Task } from './clickup.ts';
 import {
   NOTE_TYPES,
   FOLDER_BY_TYPE,
@@ -953,96 +952,6 @@ export const TOOLS: Record<string, Tool> = {
     },
   }),
 
-  /* ---- ClickUp: só leitura (nenhuma ferramenta altera o ClickUp) ---- */
-
-  clickup_tasks: defineTool({
-    description:
-      'Lê tarefas do ClickUp (só leitura). scope "me" = minhas; "team" = equipe. Filtre por pessoa (nome ou parte dele), espaço (nome), ' +
-      'projeto (pasta do ClickUp, ex.: "Projeto Core"), lista (cliente/frente dentro do projeto, ex.: "Cliente A"), atrasadas ou prazo nos próximos N dias.',
-    args: s.object({
-      scope: s.optional(s.oneOf(['me', 'team'], 'padrão: team')),
-      person: s.optional(s.string({ min: 1, description: 'nome/usuário de quem é responsável, ex.: "ana"' })),
-      space: s.optional(s.string({ min: 1, description: 'nome do espaço, ex.: "EMPRESA"' })),
-      project: s.optional(s.string({ min: 1, description: 'nome da pasta/projeto, ex.: "core", "campo"' })),
-      list: s.optional(s.string({ min: 1, description: 'nome da lista dentro do projeto, ex.: "Cliente A"' })),
-      overdue: s.optional(s.boolean('só atrasadas')),
-      due_within_days: s.optional(s.number({ min: 0, max: 365, description: 'prazo até N dias a partir de hoje' })),
-      include_closed: s.optional(s.boolean('inclui concluídas (padrão: false)')),
-    }),
-    async run(args) {
-      const st = await clickupStatus();
-      if (!st.configured) return fail('ClickUp não configurado: falta app/clickup.config.json com o token');
-      const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-      let assignee: number | undefined;
-      if (args.person) {
-        const found = st.members!.filter((m) => norm(m.name).includes(norm(args.person!)));
-        if (!found.length) return fail(`ninguém chamado "${args.person}" no workspace`, [], [`membros: ${st.members!.map((m) => m.name).join(', ')}`]);
-        if (found.length > 1) return fail(`"${args.person}" é ambíguo: ${found.map((m) => m.name).join(', ')}`);
-        assignee = found[0].id;
-      }
-      let spaceId: string | undefined;
-      if (args.space) {
-        const sp = st.spaces!.find((x) => norm(x.name).includes(norm(args.space!)));
-        if (!sp) return fail(`espaço "${args.space}" não encontrado`, [], [`espaços: ${st.spaces!.map((x) => x.name).join(', ')}`]);
-        spaceId = sp.id;
-      }
-      const folders = (st.folders ?? []).filter((f) => !spaceId || f.spaceId === spaceId);
-      let folderId: string | undefined;
-      if (args.project) {
-        const found = folders.filter((f) => norm(f.name).includes(norm(args.project!)));
-        if (!found.length) return fail(`projeto "${args.project}" não encontrado`, [], [`projetos: ${folders.map((f) => f.name).join(', ')}`]);
-        if (found.length > 1) return fail(`"${args.project}" é ambíguo: ${found.map((f) => f.name).join(', ')}`);
-        folderId = found[0].id;
-      }
-      let listId: string | undefined;
-      if (args.list) {
-        const lists = folders.filter((f) => !folderId || f.id === folderId).flatMap((f) => f.lists.map((l) => ({ ...l, folder: f.name })));
-        const found = lists.filter((l) => norm(l.name).includes(norm(args.list!)));
-        if (!found.length) return fail(`lista "${args.list}" não encontrada`, [], [`listas: ${lists.map((l) => `${l.folder} › ${l.name}`).join(', ')}`]);
-        if (found.length > 1) return fail(`"${args.list}" é ambíguo: ${found.map((l) => `${l.folder} › ${l.name}`).join(', ')}`);
-        listId = found[0].id;
-      }
-      const { tasks, truncated } = await listTasks({
-        scope: args.scope === 'me' ? 'me' : 'team',
-        assignee,
-        spaceId,
-        folderId,
-        listId,
-        overdue: args.overdue === true,
-        includeClosed: args.include_closed === true,
-      });
-      let list: Task[] = tasks;
-      if (args.due_within_days !== undefined) {
-        const limit = new Date(Date.now() + args.due_within_days * 86_400_000).toISOString().slice(0, 10);
-        list = list.filter((t) => t.due && t.due <= limit);
-      }
-      const rows = list.slice(0, 80).map((t) => ({
-        id: t.id,
-        tarefa: t.name,
-        status: t.status,
-        responsaveis: t.assignees.map((a) => a.name),
-        prazo: t.due,
-        atrasada: t.overdue || undefined,
-        prioridade: t.priority ?? undefined,
-        onde: [t.space, t.folder, t.list].filter(Boolean).join(' › '),
-        url: t.url,
-      }));
-      return {
-        ok: true,
-        summary: `${list.length} tarefa(s)${list.length > rows.length ? ` (mostrando ${rows.length})` : ''}`,
-        result: { tasks: rows, total: list.length, truncated: truncated || list.length > rows.length },
-      };
-    },
-  }),
-
-  clickup_task: defineTool({
-    description: 'Lê uma tarefa do ClickUp pelo id ou URL (só leitura): status, responsáveis, prazo, descrição. Notas podem ter "clickup: <id>" no frontmatter.',
-    args: s.object({ id: s.string({ min: 3, description: 'id ("86abc123") ou URL da tarefa' }) }),
-    async run(args) {
-      const t = await getTask(args.id);
-      return { ok: true, summary: `${t.name} (${t.status})`, result: t };
-    },
-  }),
 };
 
 export const WRITE_TOOLS = new Set(['create_note', 'append_to_note', 'update_note', 'edit_note', 'move_note', 'create_folder', 'create_file', 'update_file', 'edit_file']);
@@ -1201,9 +1110,6 @@ async function systemPrompt(focus: FocusNote | null = null, remotasPrompt = ''):
     '- Registre só o que o usuário disse que fez. Se faltar quantidade ou preço, pergunte; nunca deduza da cotação. Compra sem caixa gera aporte automático: avise.',
     '- "Acompanhar" uma ação é colocar na lista do dashboard com investimentos_acompanhar, sem registrar compra. Para alerta, use investimentos_alerta.',
     '- Baseie a análise em investimentos_carteira e investimentos_cotacao e não invente números. Relatórios são opinião de terceiros, nunca ordem.',
-    '',
-    'ClickUp (SÓ LEITURA): clickup_tasks e clickup_task consultam tarefas suas e da equipe. Você não cria nem altera nada no',
-    '  ClickUp; se pedirem, explique que a integração é só de leitura. Resumos podem virar nota (com plano), citando a URL das tarefas.',
     '',
     ...(remotasPrompt ? ['Tools instaladas:', remotasPrompt, ''] : []),
     'Tamanho (limites do modelo):',

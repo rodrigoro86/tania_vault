@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "ssr-smoke": "node scripts/ssr-render-smoke.mjs",
     "browser-smoke": "node scripts/browser-smoke.mjs",
-    "test": "node --test server/tests/*.test.mjs",
+    "test": "node --test server/tests/*.test.mjs tools/*/tests/*.test.mjs",
     "minio-smoke": "node scripts/minio-smoke.mjs",
     "whatsapp-smoke": "node scripts/whatsapp-smoke.mjs",
     "db-smoke": "node scripts/db-smoke.mjs",

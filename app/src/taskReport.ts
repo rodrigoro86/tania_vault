@@ -10,7 +10,7 @@
  * Atrasadas e Tarefas (agrupadas como na tela). Sem rede nem React: testado em
  * server/tests/task-report.test.mjs.
  */
-import type { Task } from '../server/clickup-types.ts';
+import type { Task } from '../tools/clickup/clickup-types.ts';
 
 export interface ReportInput {
   tasks: Task[];

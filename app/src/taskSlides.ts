@@ -10,7 +10,7 @@
  * atrasadas · próximos 7 dias · pontos de atenção · próximos passos.
  * Testado em server/tests/task-slides.test.mjs.
  */
-import type { Task } from '../server/clickup-types.ts';
+import type { Task } from '../tools/clickup/clickup-types.ts';
 import { br, inDays, people, stats, where, type ReportInput } from './taskReport.ts'; // com extensão: os testes rodam este arquivo direto no Node
 
 export const SLIDE_MODEL = '99-Meta/attachments/Apresentacoes/Modelo-apresentacao.html';
