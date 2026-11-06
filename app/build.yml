@@ -6,7 +6,7 @@ version: "3.7"
 # O .env precisa de: DATABASE_URL, LEGACY_PROXY_SECRET, TANIA_CONFIG_KEY, TANIA_TOOL_SECRET_CLICKUP e, na 1ª subida
 # (tabela usuarios vazia), TANIA_BOOTSTRAP_ADMIN=usuario:senha. O login passa a ser por usuário (VAULT_AUTH não vale mais).
 # Deploy: APP_DOMAIN=seu.dominio docker stack deploy --resolve-image never -c build.yml tania
-# (APP_DOMAIN é obrigatório: é o Host() das rotas do Traefik; o workflow lê de vars.APP_DOMAIN)
+# (APP_DOMAIN é obrigatório: é o Host() das rotas do Traefik. Deploy manual: não há workflow de CI no repo.)
 services:
   backend:
     image: tania-backend:${TAG:-latest}

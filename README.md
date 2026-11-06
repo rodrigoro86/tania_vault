@@ -148,12 +148,28 @@ sessão são os mesmos, então o front não percebe a troca.
 
 ## Deploy
 
-[`app/build.yml`](app/build.yml) é um stack de Docker Swarm atrás do Traefik: backend Rust na frente, Node (legado) e a tool
-ClickUp atrás. Na primeira subida o login passa a ser por usuário: defina `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`,
-`TANIA_CONFIG_KEY` e `TANIA_TOOL_SECRET_CLICKUP` no `.env` do servidor e construa as imagens `tania-app` e `tania-backend`. O workflow
-[`.github/workflows/build.yml`](.github/workflows/build.yml) testa e faz o deploy por SSH; configure no GitHub a
-variável `APP_DOMAIN` e os secrets `SSH_HOST`, `SSH_USER`, `SSH_KEY` (e, opcionais, `SSH_PORT`, `DEPLOY_DIR`,
-`DEPLOY_TOKEN`).
+**Não há CI nem deploy automatizado** (os workflows de `.github/workflows/` foram removidos): tudo é feito à mão,
+a partir da máquina de quem publica.
+
+A produção é um stack de Docker Swarm atrás do Traefik descrito em [`app/build.yml`](app/build.yml): backend Rust na
+frente, Node (legado) e a tool ClickUp atrás.
+
+1. **Construir as imagens** (na raiz do repositório):
+   ```bash
+   docker build -t tania-backend:latest backend
+   docker build -t tania-app:latest app
+   ```
+2. **Preparar o `.env`** ao lado de `app/build.yml`, com `DATABASE_URL`, `LEGACY_PROXY_SECRET`, `TANIA_CONFIG_KEY`
+   e `TANIA_TOOL_SECRET_CLICKUP`. Na primeira subida (tabela `usuarios` vazia), também `TANIA_BOOTSTRAP_ADMIN=usuario:senha`
+   — o login passa a ser por usuário, não mais por `VAULT_AUTH`.
+3. **Subir o stack** (Traefik já instalado e `docker swarm init` feito):
+   ```bash
+   APP_DOMAIN=seu.dominio docker stack deploy --resolve-image never -c app/build.yml tania
+   ```
+   `APP_DOMAIN` é obrigatório (é o `Host()` do Traefik). Para fixar uma versão, use `TAG=1.1.0` nas imagens.
+4. **Conferir**: `curl https://seu.dominio/api/health`.
+
+Em local, continua `docker compose up` na raiz (sem `.env`).
 
 ## Segurança
 

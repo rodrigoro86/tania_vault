@@ -9,13 +9,13 @@
 
 ## Resumo executivo
 
-- **Tania_Assistente** é um assistente pessoal **sempre ligado (24/7)** que recebe mensagens do usuário, **lembra do trabalho dele** e **executa ações** (não apenas conversa): captura ideias, registra tarefas concluídas, cria lembretes e acompanha investimentos.
+- **Tania_Assistente** é um assistente pessoal **sempre ligado (24/7)** que recebe mensagens do usuário, **lembra do trabalho dele** e **executa ações** (não apenas conversa): registra o trabalho de análise e teste de um sistema (agenda, testes, melhorias, especificações e documentação) e cria lembretes.
 - Stack: **agente próprio** (`Tania_Assistente/app/server/agent.ts`, type-safe com tools + fluxo plano→aprovação + validação de regras) + **DeepSeek** (LLM substituível por OpenRouter/Ollama via `agent.config.json`) + **front "Obsidian web"** (`Tania_Assistente/front`, React+Vite+TS, com terminal do agente).
 - **Storage das notas `.md`:** **MinIO** (bucket S3 com **versioning**) através da camada `VaultStore` (`LocalFsStore` + `S3Store`). As "pastas" do vault viram **object keys** no bucket.
-- **Dados estruturados:** **Postgres** (lembretes, usuários, configurações, investimentos).
-- **API única:** o servidor Node do front concentra front, agente e webhook. Novos endpoints: `/api/reminders/*`, `/api/investimentos/*` e `/api/evolution/webhook`.
+- **Dados estruturados:** **Postgres** (lembretes, usuários, configurações, tools).
+- **API única:** o servidor Node do front concentra front, agente e webhook. Novos endpoints: `/api/reminders/*` e `/api/evolution/webhook`.
 - **Canal principal: WhatsApp via Evolution API** (ponte Baileys), com **whitelist de números obrigatória** (o gateway recusa tudo até a lista ser configurada; o Node reforça). Telegram fica como **alternativa/contingência**.
-- **Classificação por gatilhos simples** para evitar erro de classificação: `💡`/`ideia:` → `Ideias/`; `✅`/`feito:` → nota do dia em `01-Diario/YYYY-MM-DD.md`; imagem/PDF encaminhado → guardado no vault como anexo. **Sempre confirmar onde salvou.**
+- **Classificação por gatilhos simples**, depois pelos agentes da Tania: `💡`/`ideia:`/`melhoria:` → `03-Melhorias/`; `✅`/`feito:` → nota do dia em `01-Agenda/AAAA-MM-DD.md`; imagem/PDF → anexo no vault. **Sempre confirmar onde salvou.**
 - **Lembretes**: tabela `lembretes` no Postgres + **scheduler** no Node que dispara via WhatsApp (sem Google Calendar, §12).
 - **Privacidade**: a API do LLM processa as mensagens em servidores de terceiros; anexos não são enviados ao LLM.
 - **Riscos já mapeados**: banimento do WhatsApp (número pré-pago + whitelist).
@@ -94,9 +94,9 @@ O nome "Tania" refere-se à **persona do assistente**: uma figura que acompanha 
 ### 3.3 Fluxo de uso típico (narrativa)
 
 1. Durante o dia, o usuário tem uma ideia → envia `💡 ...` pelo **WhatsApp** (Evolution).
-2. A Tania salva em `Ideias/` (objeto no MinIO) e responde: "💾 Ideia salva em `Ideias/2026-10-31-ideia-sobre-X.md`".
+2. A Tania salva em `03-Melhorias/` e responde: "✅ Melhoria salva em `03-Melhorias/Relatorios/Exportar-CSV.md`".
 3. Ao terminar uma tarefa → envia `✅ ...`.
-4. A Tania anexa à nota do dia em `01-Diario/2026-10-31.md` e confirma.
+4. A Tania anexa à nota do dia em `01-Agenda/2026-10-31.md` e confirma.
 5. Precisa lembrar de algo → "me lembra amanhã às 9h de ligar para o contador" → a Tania cria o lembrete e avisa no WhatsApp na hora.
 
 ---
@@ -111,7 +111,7 @@ O nome "Tania" refere-se à **persona do assistente**: uma figura que acompanha 
 | **API + agente** | **Única porta de entrada**: CRUD do vault, ferramentas do agente, webhook e scheduler. | `app/server/` (Node 24: `server.mjs` + `vault-api.mjs` + `agent.ts`). |
 | **VaultStore** | Abstração de storage: `LocalFsStore` (dev/fallback) e `S3Store` (MinIO). | `app/server/storage/` (novo). |
 | **MinIO** | Bucket com as notas `.md` + anexos. **Versioning = "undo"**. | Servidor do usuário. |
-| **Postgres** | Dados estruturados: lembretes, usuários, configurações, investimentos. | Servidor do usuário. |
+| **Postgres** | Dados estruturados: lembretes, usuários, configurações, tools. | Servidor do usuário. |
 | **Evolution API** | Ponte WhatsApp (Baileys); recebe/envia via REST + webhook. | Servidor do usuário (já subida). |
 | **DeepSeek (LLM)** | Modelo de linguagem que interpreta intenção, extrai dados e gera respostas. | Substituível por OpenRouter/Ollama via `agent.config.json`. |
 | **Scheduler** | Loop/cron que lê `lembretes` devidos e dispara via Evolution. | `app/server/scheduler.ts` (novo). |
@@ -139,7 +139,7 @@ flowchart LR
     end
 
     API --> ST
-    API --> PG[("Postgres<br/>lembretes · usuários<br/>configurações · investimentos")]
+    API --> PG[("Postgres<br/>lembretes · usuários<br/>configurações · tools")]
     API --> LLM
     ST --> MIN[("MinIO bucket<br/>*.md + anexos · versioning")]
     SCH --> EV
@@ -156,8 +156,8 @@ flowchart TD
     D -- "Não" --> E["Ignorar / log (sem resposta)"]
     D -- "Sim" --> F{"Classificação por gatilho"}
 
-    F -- "💡 ou ideia:" --> G["Criar nota em Ideias/ (MinIO)"]
-    F -- "✅ ou feito:" --> H["Anexar à nota do dia 01-Diario/YYYY-MM-DD.md (MinIO)"]
+    F -- "💡, ideia: ou melhoria:" --> G["Agente melhorias: nota em 03-Melhorias/"]
+    F -- "✅ ou feito:" --> H["Agente agenda: nota do dia 01-Agenda/YYYY-MM-DD.md"]
     F -- "anexo (PDF/imagem)" --> I["Guardar no vault (MinIO), sem LLM"]
     F -- "nenhum gatilho" --> K["Agente (LLM) interpreta / pede dado faltante"]
 
@@ -173,8 +173,8 @@ flowchart TD
 2. **Recepção**: a Evolution API chama `POST /api/evolution/webhook` no Node.
 3. **Autorização**: o Node aplica a **whitelist** (`WHATSAPP_ALLOWED_NUMBERS`). Remetente fora da lista é **ignorado e logado** (a Evolution já recusa tudo por padrão; o Node reforça).
 4. **Roteamento**: classificação por **gatilho explícito** (determinístico), antes de qualquer LLM:
-   - `💡` / `ideia:` → criar nota em `Ideias/` (MinIO);
-   - `✅` / `feito:` → anexar à nota do dia `01-Diario/YYYY-MM-DD.md` (MinIO);
+   - `💡` / `ideia:` / `melhoria:` → agente `melhorias` (nota em `03-Melhorias/`);
+   - `✅` / `feito:` → agente `agenda` (nota do dia `01-Agenda/YYYY-MM-DD.md`); sem LLM, gravação direta;
    - **anexo** (PDF/imagem) → guardado no vault (MinIO), sem passar pelo LLM;
    - **sem gatilho** → agente (LLM) usa a memória para interpretar e/ou pedir o dado faltante.
 5. **Ação**: a skill correspondente escreve no MinIO e/ou Postgres (ou lê, no caso de consulta).
@@ -210,10 +210,10 @@ flowchart TD
 
 ### 5.4 Escrita de notas e confirmação
 
-- **FR-15 [P0]** Ao salvar uma ideia, o sistema deve criar um `.md` em `Ideias/` (object key no MinIO) com nome de data + slug (ex.: `Ideias/2026-10-31-ideia.md`).
-- **FR-16 [P0]** Ao registrar uma tarefa concluída, o sistema deve **anexar** à nota do dia `01-Diario/YYYY-MM-DD.md` (criando o objeto se não existir, usando a data atual no formato `AAAA-MM-DD`).
+- **FR-15 [P0]** Ao salvar uma melhoria, o sistema deve criar um `.md` em `03-Melhorias/` (por módulo do sistema analisado), com nome curto em hífens.
+- **FR-16 [P0]** Ao registrar uma tarefa concluída, o sistema deve **anexar** à nota do dia `01-Agenda/YYYY-MM-DD.md` (criando o objeto se não existir, usando a data atual no formato `AAAA-MM-DD`).
 - **FR-17 [P0]** **Toda ação de escrita deve gerar uma resposta de confirmação** contendo: (a) um resumo do conteúdo salvo e (b) o **caminho/nome do arquivo** onde foi salvo.
-- **FR-18 [P0]** A confirmação deve usar formato consistente, ex.: `"💾 Ideia salva em Ideias/2026-10-31-ideia.md"`.
+- **FR-18 [P0]** A confirmação deve usar formato consistente, ex.: `"✅ Registrado em 01-Agenda/2026-10-31.md"`.
 - **FR-19 [P1]** O sistema deve evitar sobrescrever conteúdo: ao anexar a uma nota existente, deve **acrescentar** (append) em vez de substituir.
 - **FR-20 [P1]** O sistema deve gerar nomes de arquivo sem colisão (sufixo numérico quando necessário).
 
@@ -280,56 +280,42 @@ flowchart TD
 
 ## 7. Estrutura do Vault (pastas e arquivos)
 
-> **Nota (v2.0):** as "pastas" abaixo **não são mais diretórios físicos** — são **object keys (prefixos) no bucket MinIO**. Os dados estruturados (lembretes, investimentos) **não vivem em markdown**: vivem no **Postgres** (ver §7.6). O markdown continua para notas livres e como espelho de leitura humana.
+> **Nota (v2.0):** as "pastas" abaixo **não são mais diretórios físicos** — são **object keys (prefixos) no bucket MinIO**. Os dados estruturados (lembretes, usuários, configurações) **não vivem em markdown**: vivem no **Postgres** (ver §7.6). O markdown continua para notas livres e como espelho de leitura humana.
 
-### 7.1 Árvore de object keys (bucket MinIO)
+### 7.1 Árvore de object keys (bucket) — ambiente de análise e teste
 
 ```
 tania-vault/                         ← bucket
-├── Ideias/
-│   ├── 2026-10-31-ideia-automatizar-captura.md
-│   └── 2026-11-01-ideia-tema-de-artigo.md
-├── 01-Diario/
-│   ├── 2026-10-31.md
-│   └── 2026-11-01.md
-└── Memória/                        ← (opcional) notas de contexto do trabalho
-    └── contexto-atual.md
+├── 01-Agenda/                       ← diário (AAAA-MM-DD.md, tag agenda/diario), reuniões, relatórios
+├── 02-Testes/<Modulo>/              ← casos de teste e execuções (type test)
+├── 03-Melhorias/<Modulo>/           ← melhorias e problemas de usabilidade (type improvement)
+├── 04-Especificacoes/<Modulo>/      ← regras de negócio, fluxos, critérios de aceite (type spec)
+├── 05-Documentacao/                 ← como usar, instalar, configurar (type doc)
+└── 99-Meta/
+    ├── Agentes/                     ← instruções da Tania e da equipe (§7.9)
+    └── attachments/                 ← anexos (whatsapp/AAAA-MM/, apresentações...)
 ```
 
-### 7.2 Template de nota — Ideia
+Os types antigos (`command`, `learning`, `project`, `idea`) continuam válidos como legado, fora do mapa sugerido ao agente.
+O formato de cada tipo de nota é definido pelos agentes da Tania (`99-Meta/Agentes/Tania/*.md`, modelos em `agents/tania/`).
 
-Arquivo (object key): `Ideias/YYYY-MM-DD-<slug>.md`
+### 7.2 Nota do dia (agenda)
+
+Arquivo: `01-Agenda/AAAA-MM-DD.md` (um por dia; só notas com a tag `agenda/diario` seguem essa regra).
 
 ```markdown
 ---
-tipo: ideia
-data: 2026-10-31
-fonte: whatsapp
+type: journal
+created: 2026-10-31
+tags: [agenda/diario]
+status: open
 ---
 
-# 💡 <título da ideia>
-
-<conteúdo da mensagem, sem o prefixo "💡" ou "ideia:">
-
-<!-- criado por Tania_Assistente -->
-```
-
-### 7.3 Template de nota do dia — Agenda
-
-Arquivo (object key): `01-Diario/YYYY-MM-DD.md` (criado no primeiro `✅` do dia; appends seguintes)
-
-```markdown
-# 📅 2026-10-31
+# 2026-10-31
 
 ## ✅ Feito
-- 10:22 — Finalizei o relatório de outubro
-- 15:47 — Revisei o contrato do fornecedor
-
-## 📝 Notas
-- <itens opcionais>
+- ✅ Executei o caso [[Login-senha-errada]]: falhou
 ```
-
-> Regra: cada `✅`/`feito:` gera uma linha `- HH:MM — <texto>` na seção `## ✅ Feito`.
 
 ### 7.5 Template de memória (opcional)
 
@@ -347,7 +333,7 @@ Arquivo (object key): `Memória/contexto-atual.md`
 
 ### 7.6 Dados estruturados no Postgres (schema resumido)
 
-Fonte de verdade para lembretes, usuários, configurações e investimentos (§13).
+Fonte de verdade para lembretes, usuários, configurações e tools.
 
 | Tabela | Campos-chave |
 |--------|--------------|
@@ -384,7 +370,7 @@ Primeiro admin: `TANIA_BOOTSTRAP_ADMIN` ou `tania user add <nome> --admin` (senh
 ### 7.8 Configuração das integrações no banco (backend Rust)
 
 O admin edita em ⚙ Configurações (`/configuracoes`) as integrações: WhatsApp/Evolution, chaves de LLM, token do
-ClickUp (`CLICKUP_TOKEN`) e rate limit. `BRAPI_TOKEN` (investimentos, escondidos no front) fica só no env. O valor salvo no banco vence o `.env`. Ele vale na subida (o Rust lê o rate limit; o Node, via
+e rate limit (o token do ClickUp é config da tool, §7.10). O valor salvo no banco vence o `.env`. Ele vale na subida (o Rust lê o rate limit; o Node, via
 `server/config-db.mjs`, põe tudo em `process.env` antes de carregar os módulos). Banco, storage, porta e segredos de
 infraestrutura continuam só no env. Spec: `docs/superpowers/specs/2026-11-05-config-no-banco-design.md`.
 
@@ -433,7 +419,7 @@ admin), o contrato é o mesmo. Spec: `docs/superpowers/specs/2026-11-06-tools-de
 
 Tabelas `tools` e `tools_config` (`backend/migrations/103_tools.sql`). O agente (Node) junta as funções MCP das tools às suas
 como `{id}__{nome}` e acrescenta o `prompt` de cada manifesto. Tools internas: **ClickUp** (`app/tools/clickup/`: tarefas, painel,
-card de nota com `clickup:` no frontmatter; token em `tools_config`). Planejadas: Investimentos e Aluguéis.
+card de nota com `clickup:` no frontmatter; token em `tools_config`). Aluguéis pode voltar no futuro como tool externa.
 
 ## 8. Configuração
 
@@ -457,7 +443,6 @@ card de nota com `clickup:` no frontmatter; token em `tools_config`). Planejadas
 | `RUSTFS_ACCESS_KEY` | Access key do bucket. | `...` |
 | `RUSTFS_SECRET_KEY` | Secret key do bucket. | `...` |
 | `RUSTFS_BUCKET` | Bucket das notas. | `tania-vault` |
-| `BRAPI_TOKEN` | Token da brapi.dev para cotações (§13). Sem ele, as rotinas ficam desligadas. | `...` |
 | `DATABASE_URL` | Conexão com o Postgres. No backend Rust é também o login (usuários e sessões); sem ela, só o localhost entra. Alternativa (usada pelo compose local): as variáveis padrão `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, lidas quando `DATABASE_URL` está vazia. | `postgres://tania:...@postgres.local:5432/tania` |
 | `EVOLUTION_URL` | Base URL da Evolution API. | `http://evolution.local:8080` |
 | `EVOLUTION_API_KEY` | apikey da Evolution. | `...` |
@@ -590,59 +575,9 @@ WHATSAPP_ALLOWED_NUMBERS=5511999999999
 Nenhuma decisão aberta. Fechadas em 2026-11-06:
 
 1. **Lembretes**: só mensagem WhatsApp. Google Calendar fica fora.
-2. **Anexos**: sem leitura automática (nem visão, nem OCR). O arquivo vai para `COMPROVANTES_DIR` sem passar pelo LLM.
+2. **Anexos**: sem leitura automática (nem visão, nem OCR). Imagem/PDF do WhatsApp vai para `99-Meta/attachments/whatsapp/` sem passar pelo LLM.
 3. **Backup do vault**: só o versioning do bucket, sem espelho git local.
-4. **Financeiro**: sai da spec; volta no futuro como tool separada.
-
----
-
-## 13. Investimentos
-
-Módulo em `/investimentos` para acompanhar ações da B3 e medir se as decisões dão resultado. A Tania **nunca executa ordens nem acessa a corretora**: a carteira real só registra o que o usuário informa, e sugestão de IA não é recomendação profissional.
-
-### 13.1 Escopo
-
-- Só ações da B3, sem FII, ETF ou exterior.
-- Três carteiras: `real`, `agente` (só dados de mercado) e `agente_relatorios` (mercado + recomendações dos relatórios). Comparadas entre si, com Ibovespa e com CDI, por rentabilidade em cotas: aporte não conta como ganho.
-- Registro pelo site e pelo WhatsApp/terminal (tools `investimentos_*`). Compra sem caixa gera o aporte que faltava.
-- Aporte e retirada da carteira real são espelhados nas fictícias: mesmo valor, mesma data.
-- Lista "Acompanhando": ações salvas para ver no dashboard com preço e variação no dia e em 30 dias, pelo site ou pela tool `investimentos_acompanhar`. É só observação: os agentes fictícios não a leem e ela não cria alertas.
-
-### 13.2 Modelo de dados (`migrations/003_investimentos.sql`, `004_acompanhadas.sql`)
-
-Schema `investimentos`. A carteira é um livro de `movimentos`: caixa, posições e rentabilidade são calculados dele, então lançamento retroativo funciona. Demais tabelas: `carteiras`, `ordens`, `cotacoes`, `ultimos`, `indicadores`, `alertas`, `acompanhadas`, `relatorios`, `analises` e `rotinas` (trava de execução).
-
-### 13.3 Rotinas (`server/investimentos-rotinas.mjs`, horário de São Paulo, dias úteis)
-
-| Quando | O quê |
-|---|---|
-| 10h-18h, a cada 30 min | Preços das ações em uso e alertas (no máximo um por regra e cinco por dia). |
-| 18h30 (repete a cada 30 min até 22h se faltar dado) | Histórico, CDI e proventos; ordens do dia anterior pela abertura de hoje; decisões dos agentes; resumo no WhatsApp. |
-
-Sem pregão no dia (feriado), não há decisão. Sem `BRAPI_TOKEN`, as rotinas ficam desligadas.
-
-### 13.4 Agentes
-
-- **Fictícios:** chamada única ao LLM, sem ferramentas, que devolve ordens em JSON. Não veem a carteira real nem ordens uns dos outros. Só `agente_relatorios` recebe as recomendações extraídas.
-- **Simulador é código, não IA** (`investimentos-calc.mjs`): valida ticker do universo, caixa e posição, aplica o preço de abertura do pregão seguinte e taxa de 0,03%. Até 5 ordens por dia.
-- **Analista:** é a Tania, com as tools `investimentos_*`, mais o resumo diário.
-- **Leitor de relatórios:** chamada sem ferramentas que só extrai resumo e recomendações. O texto é tratado como dado, e o resto do sistema só recebe campos validados. O texto vai para o provedor de LLM ativo: conferir os termos da assinatura.
-
-### 13.5 Dados externos
-
-- Cotações, histórico e proventos: [brapi](https://brapi.dev), com `BRAPI_TOKEN`. Plano gratuito: 30 min de atraso, 15 mil requisições por mês, 3 meses de histórico, um ticker por requisição. O histórico mais longo se forma no banco.
-- CDI: SGS do Banco Central, série 12.
-
-### 13.6 API
-
-`/api/investimentos/`: `resumo` (GET), `movimentos` (GET, POST, DELETE `/:id`, só carteira real), `ordens` (GET), `analises` (GET), `alertas` (GET, POST, DELETE `/:id`), `acompanhadas` (GET, POST valida o ticker na brapi, DELETE `/:ticker`) e `relatorios` (GET, POST com texto colado).
-
-### 13.7 Limitações conhecidas
-
-- Desdobramentos e grupamentos não são ajustados: exigem correção manual.
-- Provento usa os dados da brapi: JCP com 15% retidos, sem cálculo de imposto de venda.
-- Relatório entra como texto colado. PDF e leitura automática dependem do serviço assinado.
-- Importação de nota de corretagem fica para depois.
+4. **Financeiro e investimentos**: removidos do sistema (2026-11-06). O vault virou ambiente de análise e teste; aluguéis pode voltar como tool.
 
 ---
 
@@ -650,10 +585,10 @@ Sem pregão no dia (feriado), não há decisão. Sem `BRAPI_TOKEN`, as rotinas f
 
 | # | Mensagem do usuário (WhatsApp) | Gatilho | Ação | Resposta da Tania (via Evolution `sendText`) |
 |---|---------------------|---------|------|-------------------|
-| 1 | `💡 automatizar a captura de ideias` | 💡 | cria `Ideias/2026-10-31-automatizar-a-captura-de-ideias.md` (MinIO) | "💾 Ideia salva em `Ideias/2026-10-31-automatizar-a-captura-de-ideias.md`" |
-| 2 | `ideia: escrever artigo sobre produtividade` | ideia: | cria `Ideias/2026-10-31-escrever-artigo-sobre-produtividade.md` (MinIO) | "💾 Ideia salva em `Ideias/2026-10-31-escrever-artigo-sobre-produtividade.md`" |
-| 3 | `✅ fechei a planilha do mês` | ✅ | append em `01-Diario/2026-10-31.md` → `- 15:47 — fechei a planilha do mês` | "✅ Registrado em `01-Diario/2026-10-31.md`" |
-| 4 | `feito: enviei o relatório` | feito: | append em `01-Diario/2026-10-31.md` | "✅ Registrado em `01-Diario/2026-10-31.md`" |
+| 1 | `melhoria: exportar o relatório em CSV` | melhoria: | agente melhorias: cria `03-Melhorias/Relatorios/Exportar-CSV.md` | "✅ Melhoria salva em `03-Melhorias/Relatorios/Exportar-CSV.md`" |
+| 2 | `testei o login com senha errada e deu erro 500` | — (agente) | agente testes: caso `02-Testes/Login/Senha-errada.md` + execução ❌ | "❌ Registrado: Login › Senha errada falhou (erro 500)" |
+| 3 | `✅ revisei a especificação de usuários` | ✅ | agente agenda: append em `01-Agenda/2026-10-31.md` | "✅ Registrado em `01-Agenda/2026-10-31.md`" |
+| 4 | `feito: reunião com o cliente` | feito: | agente agenda: append em `01-Agenda/2026-10-31.md` | "✅ Registrado em `01-Agenda/2026-10-31.md`" |
 | 5 | `me lembra amanhã às 9h de ligar para o contador` | — (agente) | cria lembrete em `lembretes` (Postgres) | "⏰ Lembrete criado para 01/11 às 09:00" |
 | 6 | [número fora da whitelist] | — | ignora + log (Evolution recusa por padrão) | *(sem resposta)* |
 
@@ -663,9 +598,9 @@ Sem pregão no dia (feriado), não há decisão. Sem `BRAPI_TOKEN`, as rotinas f
 
 - **VaultStore**: camada de abstração de storage; implementações `LocalFsStore` (filesystem) e `S3Store` (MinIO).
 - **MinIO**: object storage compatível com S3; guarda as notas `.md` e anexos como **object keys** num bucket com **versioning**.
-- **Object key**: caminho de um objeto no bucket (ex.: `Ideias/2026-10-31-ideia.md`); substitui o "arquivo numa pasta" no modo MinIO.
+- **Object key**: caminho de um objeto no bucket (ex.: `02-Testes/Login/Senha-errada.md`); substitui o "arquivo numa pasta" no modo MinIO.
 - **Presigned URL**: URL assinada de curta duração para acessar um objeto do MinIO sem expor credenciais.
-- **Postgres**: banco relacional; fonte de verdade para lembretes, usuários, configurações e investimentos.
+- **Postgres**: banco relacional; fonte de verdade para lembretes, usuários, configurações e tools.
 - **Evolution API**: ponte WhatsApp (Baileys) que expõe REST + webhook para receber/enviar mensagens.
 - **Agente (do front)**: `server/agent.ts` — cérebro type-safe com tools + fluxo plano→aprovação + validação de regras. *(O Hermes Agent não é o cérebro; seria apenas opcional/complementar.)*
 - **Vault**: conjunto de notas `.md` armazenadas como object keys no MinIO (front "Obsidian web" lê/edita).

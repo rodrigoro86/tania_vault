@@ -1214,6 +1214,8 @@ a { color: var(--link); }
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* ícones no meio da faixa (mais abaixo, não colados no topo) */
+  justify-content: center;
   gap: 6px;
   padding: 10px 0;
   border-right: 1px solid var(--border);

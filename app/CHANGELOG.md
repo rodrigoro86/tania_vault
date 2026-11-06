@@ -6,7 +6,7 @@ A versão vale em `app/package.json` e aparece no site (rodapé do explorador e 
 
 Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.md`).
 
-## [Não lançado]
+## [1.1.0] — 2026-11-06
 
 ### Adicionado
 - Instruções do painel 🤖 Agents agrupadas em **Tania** (geral + agentes especializados) e **Equipe**.
@@ -14,6 +14,8 @@ Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.m
 
 ### Alterado
 - ☑ Tarefas e 📊 Painel ClickUp agora são páginas da tool, montadas dentro do iframe: `app/tools/clickup/ui/` (`Tasks.tsx`, `Dashboard.tsx`, `main.tsx` + `tarefas.html`, `painel.html`, `card.html`), com entrada própria no Vite (`build.rollupOptions.input`) e saída em `dist/tools/clickup/ui/`. A API chamada pelo front passa de `/api/clickup/*` para `/tools/clickup/api/*`, e os links para notas/rotas do front usam `/#/...` com `target="_top"` (fora do iframe). O `body` ganha a classe `tool-embed`. `tsconfig.json` passa a checar `tools/`.
+- 📌 Faixa de ícones do menu da esquerda: os botões (📄 Vault, tools, 🤖 Agents) ficam centralizados verticalmente na faixa de 44px, em vez de colados no topo.
+
 
 ## [1.0.0] — 2026-11-06
 

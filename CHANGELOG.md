@@ -3,7 +3,7 @@
 Mudanças relevantes do projeto Tania. Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) ·
 versões em [SemVer](https://semver.org/lang/pt-BR/). O detalhe do front fica em [app/CHANGELOG.md](app/CHANGELOG.md).
 
-## [Não lançado]
+## [1.1.0] — 2026-11-06
 
 ### Adicionado
 - 🤖 **Agentes da Tania**: notas `99-Meta/Agentes/Tania/<nome>.md` (com `quando:`) viram agentes especializados que a Tania escolhe sozinha pela ferramenta `usar_agente`, no terminal e no WhatsApp. Modelos `agenda` e `ideias` em `agents/tania/`. No WhatsApp, `feito:` e `ideia:` passam pelo agente; sem LLM, gravam direto como antes.
@@ -16,6 +16,9 @@ versões em [SemVer](https://semver.org/lang/pt-BR/). O detalhe do front fica em
 - 🦀 Backend Rust (F3a): `/api/reminders` (listar, criar, cancelar) e as rotas simples de `/api/investimentos` (movimentos: listar e apagar; ordens; análises; alertas; acompanhadas: listar e remover; relatórios: listar) passam a ser atendidos direto no Postgres, com o mesmo JSON do Node. O resto segue no Node.
 - 📄 Financeiro (aluguéis, recebimentos, Carnê-Leão) sai da spec do projeto (SPEC, AGENTS, README, papéis dos agentes); volta no futuro como tool separada. O código atual continua no app.
 - SPEC §12 fechado: lembretes só pelo WhatsApp, comprovantes sem leitura automática, backup só pelo versionamento do bucket.
+- 📌 **Menu da esquerda**: os ícones da faixa (📄 Vault, tools, 🤖 Agents) ficam centralizados verticalmente na faixa de 44px — mais abaixo, não colados no topo.
+- 🚧 **Sem CI**: saem do repo `.github/workflows/ci.yml` e `.github/workflows/build.yml`. Testes, build e deploy são manuais (README → *Deploy*).
+
 
 ## [1.0.0] — 2026-11-06
 
