@@ -1259,3 +1259,11 @@ a { color: var(--link); }
   border: 0;
   background: transparent;
 }
+
+/* vinculo de tool em Properties.tsx (iframe do manifesto) */
+.tool-vinculo {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border: 0;
+}

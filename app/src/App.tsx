@@ -10,6 +10,7 @@ import InvestmentsPage from './components/Investments';
 import UsersPage from './components/Users';
 import ResizeHandle from './components/ResizeHandle';
 import SettingsPage from './components/Settings';
+import ToolsPage from './components/ToolsPage';
 import AgentsPage from './components/Agents';
 import Properties from './components/Properties';
 import Terminal from './components/Terminal';
@@ -326,6 +327,7 @@ function Layout() {
             <Route path="/investimentos/*" element={<InvestmentsPage />} />
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
+            <Route path="/tools-admin" element={<ToolsPage />} />
             <Route path="/agentes" element={<AgentsPage />} />
             <Route path="*" element={<NoteView key={note?.path ?? 'none'} note={note} onTerminal={vaultWritable ? openTerminalFor : undefined} />} />
           </Routes>

@@ -25,6 +25,9 @@ export function ConfigTabs() {
       <NavLink end to="/usuarios" className={cls}>
         Usuários
       </NavLink>
+      <NavLink end to="/tools-admin" className={cls}>
+        Tools
+      </NavLink>
     </nav>
   );
 }

@@ -8,13 +8,15 @@ import {
   type Note,
 } from '../vault';
 import { formatValue } from '../frontmatter';
-import { ClickUpCard } from './Tasks';
+import { useTools } from '../tools';
 
 function encode(path: string): string {
   return path.split('/').map((p) => encodeURIComponent(p)).join('/');
 }
 
 export default function Properties({ note }: { note: Note | null }) {
+  // hook antes do return: a ordem dos hooks não pode mudar entre renders
+  const tools = useTools();
   if (!note) return null;
 
   const entries = Object.entries(note.frontmatter).filter(([, v]) => v !== null && v !== undefined);
@@ -24,11 +26,28 @@ export default function Properties({ note }: { note: Note | null }) {
   const embeds = noteEmbeds(note.body);
   const dangling = danglingAttachments(note.body);
 
-  const clickup = typeof note.frontmatter.clickup === 'string' ? note.frontmatter.clickup.trim() : '';
+  // vinculos declarados pelas tools: cada campo do frontmatter que a tool usa
+  const vinculos = tools
+    .flatMap((tool) => (tool.manifest?.vinculos ?? []).map((v) => ({ tool, v })))
+    .filter(({ v }) => typeof note.frontmatter[v.campo] === 'string' && (note.frontmatter[v.campo] as string).trim())
+    .map(({ tool, v }) => ({
+      id: tool.id,
+      nome: tool.manifest?.nome || tool.id,
+      campo: v.campo,
+      pagina: v.pagina,
+      valor: (note.frontmatter[v.campo] as string).trim(),
+    }));
 
   return (
     <div className="panel-inner">
-      {clickup && <ClickUpCard key={clickup} id={clickup} />}
+      {vinculos.map(({ id, nome, campo, pagina, valor }) => (
+        <iframe
+          key={`${id}:${campo}`}
+          className="tool-vinculo"
+          title={`${nome}: ${valor}`}
+          src={`/tools/${id}/ui/${pagina}?valor=${encodeURIComponent(valor)}`}
+        />
+      ))}
       <section className="panel-section">
         <h2>Propriedades</h2>
         {entries.length === 0 && <p className="muted">Sem frontmatter.</p>}
