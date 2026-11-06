@@ -73,7 +73,7 @@ test('agente do vault', async (t) => {
   await t.test('sem agent.config.json: 503 com instrução', async () => {
     const r = await chat([{ role: 'user', content: 'oi' }]);
     assert.equal(r.status, 503);
-    assert.match(r.events[0].error, /agent\.config\.json/);
+    assert.match(r.events[0].error, /🤖 Agents/);
   });
 
   await fs.writeFile(

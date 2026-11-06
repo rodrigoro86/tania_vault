@@ -199,7 +199,7 @@ export default function Terminal({
 
   function statusLine(): string {
     if (!status) return 'agente: servidor sem /api/agent';
-    if (!status.hasConfig) return 'agente sem LLM: crie app/agent.config.json no servidor (modelo: agent.config.example.json)';
+    if (!status.hasConfig) return 'agente sem LLM: salve os provedores em 🤖 Agents → Gerenciar agents e a chave em ⚙ Configurações';
     if (!status.configured) return 'agente sem LLM ativo: escolha um com /modelo <nome>';
     return `agente: ${status.active} · ${status.model} @ ${status.provider} · ${status.tools.length} ferramentas (/modelo troca)`;
   }

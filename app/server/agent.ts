@@ -233,7 +233,7 @@ async function publicStatus() {
 /** troca só o "active": no banco por jsonb_set, no arquivo por escrita atômica (tmp + rename, 600) */
 async function setActive(name: string) {
   const cfg = await loadConfig();
-  if (!cfg) throw new ApiError(404, 'sem configuração do agente: cadastre em 🤖 Agents ou crie app/agent.config.json');
+  if (!cfg) throw new ApiError(404, 'sem configuração do agente: salve os provedores em 🤖 Agents → Gerenciar agents');
   if (!providerOf(cfg, name)) throw new ApiError(400, `provedor "${name}" não existe ou está sem baseUrl/model`);
   if (lastSource === 'banco') {
     await runDb(
@@ -1398,7 +1398,7 @@ export async function handleAgent(req: IncomingMessage, res: ServerResponse, pat
     if (!provider) {
       return json(res, 503, {
         ok: false,
-        error: 'sem configuração do agente: cadastre em 🤖 Agents ou crie app/agent.config.json',
+        error: 'sem configuração do agente: salve os provedores em 🤖 Agents → Gerenciar agents',
       });
     }
     const body = (await readJson(req)) as { messages?: unknown; approvedPlan?: unknown; contextPath?: unknown };
