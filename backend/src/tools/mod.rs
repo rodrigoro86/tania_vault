@@ -5,6 +5,7 @@
 //! e consulta — nada de HTTP exposto.
 
 pub mod config;
+pub mod proxy;
 pub mod repo;
 pub mod routes;
 

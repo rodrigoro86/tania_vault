@@ -23,7 +23,7 @@ const HOP_BY_HOP: [&str; 8] = [
     "host",
 ];
 
-fn without_hop_by_hop(headers: &HeaderMap) -> HeaderMap {
+pub(crate) fn without_hop_by_hop(headers: &HeaderMap) -> HeaderMap {
     let mut out = HeaderMap::with_capacity(headers.len());
     for (name, value) in headers {
         if !HOP_BY_HOP.contains(&name.as_str()) {

@@ -24,6 +24,7 @@ use crate::error::ApiError;
 use crate::http::proxy::proxy;
 use crate::http::AppState;
 use crate::tools::config::{gravar_config, valores_da_tool, ver_config};
+use crate::tools::proxy::tool_proxy;
 use crate::tools::{manifesto, registro, registros, valid_id, valid_url, Registro, ToolAuth};
 use crate::users::routes::{admin, db, db_error, json_body, me};
 use crate::users::Usuario;
@@ -300,6 +301,13 @@ async fn core_config(
 }
 
 /// Rotas das tools. Métodos não registrados no caminho caem no proxy.
+async fn core_desconhecida() -> ApiError {
+    ApiError::Http(
+        StatusCode::NOT_FOUND,
+        "rota do núcleo desconhecida".to_string(),
+    )
+}
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -316,5 +324,9 @@ pub fn routes() -> Router<AppState> {
         )
         // o núcleo falado pelo portão do segredo: `/api/core/*`
         .route("/api/core/config", get(core_config))
-        .route("/api/core/{rest}", any(proxy))
+        // outros caminhos do núcleo ainda não existem (subprojeto 2): 404, nunca o Node
+        .route("/api/core/{*rest}", any(core_desconhecida))
+        // as páginas (`/tools/{id}/ui/...`) e a API (`/tools/{id}/api/...`) de
+        // cada tool: qualquer método, repassado em streaming pelo proxy próprio
+        .route("/tools/{id}/{*rest}", any(tool_proxy))
 }
