@@ -52,6 +52,16 @@ docker compose up -d --build
 Abra http://localhost:3000 e entre com **`admin` / `admin`**. Esse admin é criado só na primeira subida, com o banco
 vazio. **Troque a senha logo** em ⚙ (rodapé do menu) → Usuários.
 
+Para salvar chaves e tokens em ⚙ Configurações, gere uma chave uma única vez:
+
+```bash
+(umask 077; printf 'TANIA_CONFIG_KEY=%s\n' "$(head -c 32 /dev/urandom | base64)" >> .env)
+docker compose up -d
+```
+
+Execute a geração apenas se `TANIA_CONFIG_KEY` ainda não estiver definida no `.env` da raiz. Guarde uma cópia segura;
+substituir a chave torna ilegíveis os segredos salvos com a anterior. Sem chave, só configurações não secretas podem ser salvas.
+
 Depois, em ⚙ Configurações:
 - **Integrações:** chaves de LLM, token do ClickUp, dados da Evolution API (WhatsApp).
 - **🤖 Agents:** escolha o provedor do agente (modelo, URL e qual chave usar).
@@ -74,13 +84,13 @@ defina a variável no shell ou num `.env` na raiz:
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `tania`, `tania-local`, `tania` | Postgres (lidos só ao criar o volume) |
 | `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY`, `RUSTFS_BUCKET` | `tania-local`, `tania-local-secret`, `tania-vault` | bucket S3 |
 | `TANIA_BOOTSTRAP_ADMIN` | `admin:admin` | admin criado quando não há usuários |
-| `TANIA_CONFIG_KEY` | chave fixa de dev | cifra os segredos salvos no banco |
+| `TANIA_CONFIG_KEY` | vazio (gere uma chave própria) | cifra os segredos salvos no banco |
 | `LEGACY_PROXY_SECRET` | `tania-local-proxy` | segredo entre o backend Rust e o Node |
 | `FRONT_PORT`, `RUSTFS_PORT` | `3000`, `9000` | portas no host (só em `127.0.0.1`) |
 
 > **Os padrões são só para uso local.** A stack expõe as portas apenas em `127.0.0.1`. Para publicar na internet,
 > troque todos esses valores (`head -c 32 /dev/urandom | base64` gera uma `TANIA_CONFIG_KEY`) e coloque um proxy com
-> HTTPS na frente. Perder a `TANIA_CONFIG_KEY` torna ilegíveis os segredos já salvos.
+> HTTPS na frente. Se algum padrão já foi usado em produção, substitua-o antes de publicar o repositório. Perder a `TANIA_CONFIG_KEY` torna ilegíveis os segredos já salvos.
 
 Limitações conhecidas da stack local:
 - O financeiro usa um schema `alugueis` de outro projeto; localmente ele é só um stub

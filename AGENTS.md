@@ -62,7 +62,7 @@ tudo (review + testes)           → agent-reviewer
    agent-backend (consumidor) e agent-spec (docs).
 2. **API REST** (rotas em `app/server/server.mjs` e `vault-api.mjs`): `/api/notes|folders|files|rename|agent|clickup|finance|investimentos|reminders|evolution|health`; no backend Rust também `/api/auth/*`, `/api/users` (SPEC §7.7) e `/api/config` (SPEC §7.8) e `/api/agents` (SPEC §7.9).
 3. **Schema Postgres** (`app/server/migrations/`, SPEC §7.6): `lembretes`, `comprovantes` (vínculo extrato ↔ arquivo), `usuarios`, `sessoes`, `configuracoes` e `agentes_config` (migrações `100_`–`102_` em `backend/migrations/`, dono agent-data); financeiro no schema `alugueis`, cujo dono é `api_assistente_alugueis`; carteiras no schema `investimentos` (SPEC §13). As tabelas `public.imoveis/inquilinos/contratos/pagamentos` estão fora de uso.
-4. **Env vars** (SPEC §8.1): `VAULT_STORAGE`, `RUSTFS_*` (aceita `MINIO_*`), `DATABASE_URL`, `EVOLUTION_*`, `WHATSAPP_ALLOWED_NUMBERS`, `BRAPI_TOKEN`, `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`, `TANIA_CONFIG_KEY` (`VAULT_AUTH` só no Node legado).
+4. **Env vars** (SPEC §8.1): `VAULT_STORAGE`, `RUSTFS_*` (aceita `MINIO_*`), `DATABASE_URL`, `EVOLUTION_*`, `WHATSAPP_ALLOWED_NUMBERS`, `BRAPI_TOKEN`, `TANIA_BOOTSTRAP_ADMIN`, `LEGACY_PROXY_SECRET`, `TANIA_CONFIG_KEY` (`VAULT_AUTH` só no Node legado). O Compose não fornece `TANIA_CONFIG_KEY` padrão: salvar segredos exige chave própria no `.env` da raiz (SPEC §8.1).
 5. **Gatilhos** (`app/server/whatsapp.mjs`): `💡`/`ideia:` → `05-Ideias/`; `✅`/`feito:` → `01-Diario/YYYY-MM-DD.md` (um arquivo por dia);
    imagem/PDF → `COMPROVANTES_DIR`, sem passar pelo LLM (dados do recebimento vêm da legenda ou da conversa);
    resto, inclusive consultas → agente.

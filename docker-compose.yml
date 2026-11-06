@@ -34,8 +34,9 @@ x-app-env: &app-env
   PGDATABASE: *pg-db
   # segredo do header Rust -> Node: o Node só aceita o que o backend já autenticou
   LEGACY_PROXY_SECRET: ${LEGACY_PROXY_SECRET:-tania-local-proxy}
-  # cifra os segredos salvos em ⚙ Configurações (chave só de dev; em produção gere outra: head -c 32 /dev/urandom | base64)
-  TANIA_CONFIG_KEY: ${TANIA_CONFIG_KEY:-4RnmoK24do3o7c8FkI3IKHjBUOH8fOnHyNVD1NeV6TY=}
+  # cifra os segredos salvos em ⚙ Configurações; gere sua chave: head -c 32 /dev/urandom | base64
+  # sem chave, o app funciona, mas não permite salvar segredos nas Configurações
+  TANIA_CONFIG_KEY: ${TANIA_CONFIG_KEY:-}
   VAULT_STORAGE: rustfs
   RUSTFS_ENDPOINT: http://rustfs:9000
   # o navegador baixa anexos direto do bucket pela URL assinada

@@ -6,7 +6,10 @@ backend/target/
 *.log
 
 # segredos — NUNCA versionar (o .env.example é o template público)
-app/.env
+.env
+.env.*
+.env*
+!.env.example
 app/agent.config.json
 app/clickup.config.json
 .htpasswd

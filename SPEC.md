@@ -486,7 +486,7 @@ A troca do ativo continua em `POST /api/agent/config` (Node), que grava no banco
 |----------|-----------|---------|
 | `VAULT_AUTH` | Só o **Node legado** (produção atual): `usuário:senha` do login. O backend Rust não usa; lá o login é por usuário no Postgres. | `usuario:senha` |
 | `TANIA_BOOTSTRAP_ADMIN` | Backend Rust: `usuário:senha` do admin criado na subida **só se** a tabela `usuarios` estiver vazia. O compose local usa `admin:admin`; produção não deve definir. | `admin:admin` |
-| `TANIA_CONFIG_KEY` | 32 bytes em base64 (Rust e Node): cifra (AES-256-GCM) os segredos salvos em ⚙ Configurações. Sem ela, só valores não secretos podem ser salvos. | `head -c 32 /dev/urandom \| base64` |
+| `TANIA_CONFIG_KEY` | 32 bytes em base64 (Rust e Node): cifra (AES-256-GCM) os segredos salvos em ⚙ Configurações. Sem ela, só valores não secretos podem ser salvos. O compose não fornece chave padrão; configure uma chave própria no `.env` da raiz. | `head -c 32 /dev/urandom \| base64` |
 | `LEGACY_PROXY_SECRET` | Segredo compartilhado Rust → Node: o Rust manda `x-tania-proxy` (e `x-tania-user`) e o Node aceita a requisição já autenticada. Sem ele, o Node segue só com `VAULT_AUTH`. | `um-segredo-longo` |
 | `PORT` | Porta do servidor. Em dev/local (compose), o backend Rust (`backend/`) usa `3100` e o Node legado `3101`; em produção o Node segue na `3100`. | `3100` |
 | `LEGACY_UPSTREAM` | Backend Rust: URL do Node legado para onde vão as rotas ainda não portadas (migração strangler; some na F7). | `http://127.0.0.1:3101` |

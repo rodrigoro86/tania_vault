@@ -5,5 +5,7 @@ dist-smoke/
 
 # segredos: nunca versionar (o .env.example é o template público)
 .env
+.env*
+!.env.example
 agent.config.json
 clickup.config.json

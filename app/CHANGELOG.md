@@ -8,7 +8,12 @@ Como versionar: ver [[Versionar-front]] (`04-Agentes/Workflows/Versionar-front.m
 
 ## [Não lançado]
 
+## [1.0.0] — 2026-11-06
+
+Primeira versão pública.
+
 ### Alterado
+- Segurança: removida a chave de criptografia fixa do Compose; salvar segredos exige `TANIA_CONFIG_KEY` própria. Variantes e cópias de `.env` ficam fora do Git e do contexto Docker do app; somente `.env.example` é permitido no Git.
 - 🔓 Preparação para repositório público: a identidade visual de terceiros saiu (exportações viram "PDF com capa" e "Word com capa", com logo genérico em `public/brand/logo.png` e `logo-capa.png`); dados de exemplo dos testes ficaram fictícios; o domínio do deploy vem de `APP_DOMAIN` (variável do GitHub). O modelo de slides no vault passa a ser `99-Meta/attachments/Apresentacoes/Modelo-apresentacao.html`.
 - ⚙ Configurações: sai o grupo Investimentos (`BRAPI_TOKEN` continua valendo pelo `.env`) e entra **ClickUp** com `CLICKUP_TOKEN` (segredo cifrado), que vence o `token` do `clickup.config.json`; o arquivo segue opcional para `teamId`/`spaceIds`.
 - 🎨 Tema novo "petróleo": fundo navy-teal com brilhos, painéis de vidro, cantos arredondados, acento verde-água (azul, roxo e laranja de apoio), item ativo do menu em pílula, KPIs em gradiente e títulos em serifa. A impressão/PDF continua com fundo branco.
